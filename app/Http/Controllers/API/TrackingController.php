@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Repositories\Contracts\ShipmentRepositoryInterface;
 use App\Repositories\Contracts\TrackingRepositoryInterface;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
 
 class TrackingController extends Controller
@@ -79,10 +80,13 @@ class TrackingController extends Controller
 
             // Record initial history
             $this->trackingRepo->recordHistory($shipment->id, [
-                'status' => 'pending',
+                'status'      => 'pending',
                 'from_hub_id' => $originHubId,
-                'notes' => 'Paket dari gudang telah terdaftar untuk pengiriman (M1→M2 integration)'
+                'notes'       => 'Paket dari gudang telah terdaftar untuk pengiriman (M1→M2 integration)'
             ]);
+
+            // Invalidasi cache
+            CacheService::flushTag(CacheService::TAG_SHIPMENT, CacheService::TAG_STATS);
 
             return response()->json([
                 'status' => 'success',
@@ -188,6 +192,10 @@ class TrackingController extends Controller
             ];
 
             $this->trackingRepo->recordHistory($shipment->id, $historyData);
+
+            // Invalidasi cache shipment
+            CacheService::forget(CacheService::keyShipmentByTracking($trackingNumber));
+            CacheService::flushTag(CacheService::TAG_SHIPMENT, CacheService::TAG_TRACKING, CacheService::TAG_STATS);
 
             $shipment = $shipment->fresh()->load(['package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories']);
 

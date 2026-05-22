@@ -4,6 +4,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Models\Shipment;
 use App\Repositories\Contracts\ShipmentRepositoryInterface;
+use App\Services\CacheService;
 
 class ShipmentRepository implements ShipmentRepositoryInterface
 {
@@ -16,45 +17,57 @@ class ShipmentRepository implements ShipmentRepositoryInterface
 
     public function getAllShipments($search = null, $status = null)
     {
-        $query = $this->model->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories']);
+        // Untuk paginated data + search, cache per kombinasi parameter
+        $cacheKey = CacheService::keyShipmentList((string) $search, (string) $status);
 
-        if ($search) {
-            $query->where('tracking_number', 'like', "%$search%")
-                ->orWhereHas('package', function ($q) use ($search) {
-                    $q->where('sender_name', 'like', "%$search%")
-                      ->orWhere('receiver_name', 'like', "%$search%")
-                      ->orWhere('origin', 'like', "%$search%")
-                      ->orWhere('destination', 'like', "%$search%");
-                })
-                ->orWhereHas('customer', function ($q) use ($search) {
-                    $q->where('name', 'like', "%$search%")
-                      ->orWhere('email', 'like', "%$search%");
-                });
+        // Catatan: paginator tidak bisa di-cache langsung jika request page berubah.
+        // Gunakan caching hanya saat tidak ada search & status (list utama).
+        if (!$search && !$status) {
+            return CacheService::remember(
+                $cacheKey,
+                fn () => $this->buildShipmentQuery(null, null)->orderByDesc('created_at')->paginate(15),
+                CacheService::TTL_SHORT,
+                [CacheService::TAG_SHIPMENT]
+            );
         }
 
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        return $query->orderByDesc('created_at')->paginate(15);
+        return $this->buildShipmentQuery($search, $status)->orderByDesc('created_at')->paginate(15);
     }
 
     public function getShipmentById($id)
     {
-        return $this->model->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories'])
-            ->findOrFail($id);
+        $cacheKey = CacheService::keyShipmentById((int) $id);
+
+        return CacheService::remember(
+            $cacheKey,
+            fn () => $this->model
+                ->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories'])
+                ->findOrFail($id),
+            CacheService::TTL_SHORT,
+            [CacheService::TAG_SHIPMENT]
+        );
     }
 
     public function getShipmentByTrackingNumber($trackingNumber)
     {
-        return $this->model->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories'])
-            ->where('tracking_number', $trackingNumber)
-            ->firstOrFail();
+        $cacheKey = CacheService::keyShipmentByTracking($trackingNumber);
+
+        return CacheService::remember(
+            $cacheKey,
+            fn () => $this->model
+                ->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories'])
+                ->where('tracking_number', $trackingNumber)
+                ->firstOrFail(),
+            CacheService::TTL_SHORT,
+            [CacheService::TAG_SHIPMENT, CacheService::TAG_TRACKING]
+        );
     }
 
     public function searchShipment($keyword)
     {
-        return $this->model->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories'])
+        // Search selalu query langsung, tidak di-cache
+        return $this->model
+            ->with(['customer', 'package', 'fleet', 'originHub', 'destinationHub', 'currentHub', 'trackingHistories'])
             ->where('tracking_number', 'like', "%$keyword%")
             ->orWhereHas('package', function ($q) use ($keyword) {
                 $q->where('sender_name', 'like', "%$keyword%")
@@ -72,11 +85,15 @@ class ShipmentRepository implements ShipmentRepositoryInterface
 
     public function createShipment(array $data)
     {
-        // Generate unique tracking number
         $data['tracking_number'] = $this->generateTrackingNumber();
         $data['status'] = 'pending';
 
-        return $this->model->create($data);
+        $shipment = $this->model->create($data);
+
+        // Invalidasi cache list setelah insert
+        CacheService::flushTag(CacheService::TAG_SHIPMENT);
+
+        return $shipment;
     }
 
     public function updateShipmentStatus($id, $status)
@@ -92,6 +109,11 @@ class ShipmentRepository implements ShipmentRepositoryInterface
             $shipment->update(['sent_at' => now()]);
         }
 
+        // Invalidasi cache shipment ini + list
+        CacheService::forget(CacheService::keyShipmentById($id));
+        CacheService::forget(CacheService::keyShipmentByTracking($shipment->tracking_number));
+        CacheService::flushTag(CacheService::TAG_SHIPMENT, CacheService::TAG_TRACKING);
+
         return $shipment;
     }
 
@@ -103,13 +125,49 @@ class ShipmentRepository implements ShipmentRepositoryInterface
             ->get();
     }
 
-    // Helper method
-    private function generateTrackingNumber()
-    {
-        $prefix = 'TRK';
-        $timestamp = microtime(true) * 10000;
-        $random = rand(1000, 9999);
+    // ── Private Helpers ───────────────────────────────────────────────
 
-        return $prefix . substr($timestamp, -10) . $random;
+    private function buildShipmentQuery($search, $status)
+    {
+        $query = $this->model->with([
+            'customer',
+            'package',
+            'fleet',
+            'originHub',
+            'destinationHub',
+            'currentHub',
+            'trackingHistories',
+        ]);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('tracking_number', 'like', "%$search%")
+                  ->orWhereHas('package', function ($q2) use ($search) {
+                      $q2->where('sender_name', 'like', "%$search%")
+                         ->orWhere('receiver_name', 'like', "%$search%")
+                         ->orWhere('origin', 'like', "%$search%")
+                         ->orWhere('destination', 'like', "%$search%");
+                  })
+                  ->orWhereHas('customer', function ($q2) use ($search) {
+                      $q2->where('name', 'like', "%$search%")
+                         ->orWhere('email', 'like', "%$search%");
+                  });
+            });
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query;
+    }
+
+    private function generateTrackingNumber(): string
+    {
+        $prefix    = 'TRK';
+        $timestamp = microtime(true) * 10000;
+        $random    = rand(1000, 9999);
+
+        return $prefix . substr((string) $timestamp, -10) . $random;
     }
 }

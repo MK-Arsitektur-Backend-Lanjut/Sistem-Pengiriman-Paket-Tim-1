@@ -33,9 +33,12 @@ class CustomerAuthController extends Controller
         ]);
 
         $user = User::create([
-            'name'     => $payload['name'],
-            'email'    => $payload['email'],
-            'password' => $payload['password'],
+            'name'        => $payload['name'],
+            'email'       => $payload['email'],
+            'password'    => $payload['password'],
+            'phone'       => $payload['phone'] ?? null,
+            'address'     => $payload['address'] ?? null,
+            'is_customer' => true,
         ]);
 
         $token = JWTAuth::fromUser($user);

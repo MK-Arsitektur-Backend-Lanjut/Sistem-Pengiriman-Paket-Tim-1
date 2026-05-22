@@ -10,14 +10,19 @@ use App\Http\Controllers\TrackingWebController;
 // ── Module 3: Autentikasi JWT (Dedicated Login & Register Pages) ──
 Route::get('/auth/login',    fn() => view('auth.login'))->name('auth.login');
 Route::get('/auth/register', fn() => view('auth.register'))->name('auth.register');
+Route::get('/auth/profile',  fn() => view('auth.profile'))->name('auth.profile');
 
 // ── Homepage Utama ──
-Route::get('/home', function () {
+Route::get('/', function () {
     return view('pages.home.index');
 })->name('home');
 
+Route::get('/home', function () {
+    return redirect()->route('home');
+});
+
 // Dashboard Modul 4 (Fleet & Hub)
-Route::get('/', function (\Illuminate\Http\Request $request, HubRepositoryInterface $hubRepo, FleetRepositoryInterface $fleetRepo) {
+Route::get('/fleet', function (\Illuminate\Http\Request $request, HubRepositoryInterface $hubRepo, FleetRepositoryInterface $fleetRepo) {
     if(!\Illuminate\Support\Facades\Schema::hasTable('hubs')) {
         return "Database sedang disiapkan, ini wajar saat instalasi. Harap refresh halaman.";
     }

@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Akun - SiPaket Tim 1</title>
     <meta name="description" content="Daftar akun pelanggan SiPaket untuk mulai melacak dan mengelola pengiriman paket Anda.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('/vendor/fonts/inter.woff2') format('woff2');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    <link href="/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root {
             --brand-primary: #2563eb;
@@ -612,7 +618,7 @@
                 showAlert('Akun berhasil dibuat! Mengalihkan ke dashboard...', 'success');
 
                 setTimeout(() => {
-                    window.location.href = '/home';
+                    window.location.href = '/';
                 }, 1000);
 
             } catch (error) {

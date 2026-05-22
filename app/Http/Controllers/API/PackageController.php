@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePackageRequest;
 use App\Http\Requests\UpdatePackageRequest;
 use App\Models\Package;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -86,10 +87,13 @@ class PackageController extends Controller
             $packageData['effective_weight']   = $this->calcEffectiveWeight($package);
             $packageData['weight_basis']       = $this->calcEffectiveWeight($package) > $package->weight ? 'volumetric' : 'actual';
 
+            // Invalidasi cache paket
+            CacheService::flushTag(CacheService::TAG_PACKAGE, CacheService::TAG_STATS);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Package registered successfully',
-                'data' => $packageData
+                'data'    => $packageData
             ], 201);
         } catch (\Exception $e) {
             Log::error('Package store error: ' . $e->getMessage(), [
@@ -212,10 +216,14 @@ class PackageController extends Controller
             $packageData['effective_weight']   = $this->calcEffectiveWeight($package);
             $packageData['weight_basis']       = $this->calcEffectiveWeight($package) > $package->weight ? 'volumetric' : 'actual';
 
+            // Invalidasi cache paket
+            CacheService::forget(CacheService::keyPackageById($id));
+            CacheService::flushTag(CacheService::TAG_PACKAGE, CacheService::TAG_STATS);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Package updated successfully',
-                'data' => $packageData
+                'data'    => $packageData
             ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -261,10 +269,14 @@ class PackageController extends Controller
 
             $package->delete();
 
+            // Invalidasi cache paket
+            CacheService::forget(CacheService::keyPackageById($id));
+            CacheService::flushTag(CacheService::TAG_PACKAGE, CacheService::TAG_STATS);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Package deleted successfully',
-                'data' => $package
+                'data'    => $package
             ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([

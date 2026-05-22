@@ -1,5 +1,5 @@
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+<script src="/vendor/axios.min.js"></script>
 <script>
     const API_URL = '/api/v1';
     const warehouseModal = new bootstrap.Modal(document.getElementById('warehouseModal'));

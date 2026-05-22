@@ -17,8 +17,8 @@ Route::prefix('v1')->group(function (): void {
     // Modul 3: Authentication (JWT) - Public Endpoints
     // ══════════════════════════════════════════════════════════════════
     Route::prefix('auth')->group(function () {
-        Route::post('/register', [CustomerAuthController::class, 'register'])->name('auth.register');
-        Route::post('/login',    [CustomerAuthController::class, 'login'])->name('auth.login');
+        Route::post('/register', [CustomerAuthController::class, 'register'])->name('api.auth.register');
+        Route::post('/login',    [CustomerAuthController::class, 'login'])->name('api.auth.login');
     });
 
     // ══════════════════════════════════════════════════════════════════

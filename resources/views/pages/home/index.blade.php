@@ -519,7 +519,7 @@
             </div>
 
             <div class="col-md-6 col-xl-3">
-                <a href="{{ url('/') }}" class="module-card mod-4">
+                <a href="{{ url('/fleet') }}" class="module-card mod-4">
                     <div class="module-card-header">
                         <div class="module-icon-wrap"><i class="bi bi-truck-front-fill"></i></div>
                         <div>

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Repositories\Contracts\ShipmentRepositoryInterface;
 use App\Repositories\Contracts\TrackingRepositoryInterface;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TrackingWebController extends Controller
 {
@@ -29,15 +31,27 @@ class TrackingWebController extends Controller
 
         try {
             $shipments = $this->shipmentRepo->getAllShipments($search, $status);
-            
-            // Statistik
-            $stats = [
-                'total' => \App\Models\Shipment::count(),
-                'pending' => \App\Models\Shipment::where('status', 'pending')->count(),
-                'in_transit' => \App\Models\Shipment::where('status', 'in_transit')->count(),
-                'delivered' => \App\Models\Shipment::where('status', 'delivered')->count(),
-                'failed' => \App\Models\Shipment::where('status', 'failed')->count(),
-            ];
+
+            // Statistik — satu query aggregation, di-cache 60 detik via Redis
+            $stats = CacheService::remember(
+                CacheService::keyDashboardStats(),
+                function () {
+                    $rows = DB::table('shipments')
+                        ->selectRaw('status, COUNT(*) as total')
+                        ->groupBy('status')
+                        ->pluck('total', 'status');
+
+                    return [
+                        'total'      => $rows->sum(),
+                        'pending'    => (int) ($rows['pending']    ?? 0),
+                        'in_transit' => (int) ($rows['in_transit'] ?? 0),
+                        'delivered'  => (int) ($rows['delivered']  ?? 0),
+                        'failed'     => (int) ($rows['failed']     ?? 0),
+                    ];
+                },
+                CacheService::TTL_SHORT,
+                [CacheService::TAG_STATS, CacheService::TAG_SHIPMENT]
+            );
 
             return view('tracking.index', compact('shipments', 'stats', 'status', 'search'));
         } catch (\Exception $e) {

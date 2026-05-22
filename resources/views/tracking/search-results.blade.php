@@ -3,6 +3,7 @@
 @section('title', 'Modul 2 - Hasil Pencarian')
 @section('meta_description', 'Hasil pencarian paket berdasarkan kata kunci tracking.')
 @section('active_nav', 'tracking')
+@section('requires_auth', '1')
 
 @push('styles')
 <style>

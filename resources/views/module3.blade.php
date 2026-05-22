@@ -34,11 +34,12 @@
         <section class="card-soft p-4 p-lg-5">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
                 <div>
-                    <h3 class="h4 fw-bold mb-1">Module 3 API Playground</h3>
-                    <p class="text-secondary mb-0">Kelola autentikasi pelanggan, profil pengiriman, dan kalkulator ongkir langsung dari halaman ini.</p>
+                    <h3 class="h4 fw-bold mb-1">Module 3 — Customer Auth & Shipping (JWT)</h3>
+                    <p class="text-secondary mb-0">Autentikasi pelanggan dengan <strong>JSON Web Token (JWT)</strong>. Token tersimpan otomatis saat login/register.</p>
                 </div>
-                <div class="d-flex gap-2">
-                    <span id="tokenBadge" class="badge text-bg-secondary">Token: Belum login</span>
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <span id="tokenBadge" class="badge text-bg-secondary">Memuat...</span>
+                    <span id="navUserName" class="text-secondary" style="font-size:0.85rem;"></span>
                     <button id="btnLogout" type="button" class="btn btn-outline-danger btn-sm">Logout</button>
                 </div>
             </div>
@@ -274,12 +275,28 @@
 
 @push('scripts')
 <script>
-    const API_BASE = '/api/v1';
-    const TOKEN_KEY = 'module3_customer_token';
+    const API_BASE  = '/api/v1';
+    const TOKEN_KEY = 'module3_jwt_token';
 
-    const globalAlert = document.getElementById('globalAlert');
-    const tokenBadge = document.getElementById('tokenBadge');
+    // ── Guard: redirect ke login jika belum terautentikasi ──
+    (function guardAuth() {
+        if (!localStorage.getItem(TOKEN_KEY)) {
+            window.location.replace('/auth/login');
+        }
+    })();
+
+    const globalAlert  = document.getElementById('globalAlert');
+    const tokenBadge   = document.getElementById('tokenBadge');
     const tokenPreview = document.getElementById('tokenPreview');
+    const navUserName  = document.getElementById('navUserName');
+
+    // Tampilkan info user dari localStorage
+    (function showUserInfo() {
+        const user = JSON.parse(localStorage.getItem('module3_user') || '{}');
+        if (user.name && navUserName) {
+            navUserName.textContent = '👤 ' + user.name;
+        }
+    })();
 
     function showAlert(message, type = 'info') {
         globalAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
@@ -399,11 +416,11 @@
     document.getElementById('btnLogout').addEventListener('click', async () => {
         try {
             await callApi('/auth/logout', 'POST', {}, true);
+        } catch (_) {}
+        finally {
             clearToken();
-            showAlert('Logout berhasil.', 'success');
-        } catch (error) {
-            clearToken();
-            showAlert(error.message + ' Token lokal tetap dihapus.', 'warning');
+            localStorage.removeItem('module3_user');
+            window.location.replace('/home');
         }
     });
 

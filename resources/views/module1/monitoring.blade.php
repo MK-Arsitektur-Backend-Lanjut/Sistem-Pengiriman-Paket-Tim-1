@@ -2,6 +2,7 @@
 @section('title', 'Modul 1 - Warehouse & Package Monitoring')
 @section('meta_description', 'Monitoring kapasitas warehouse dan manajemen paket masuk/keluar.')
 @section('active_nav', 'module1')
+@section('requires_auth', '1')
 @include('module1.partials.styles')
 @section('content')
 <section class="py-4">

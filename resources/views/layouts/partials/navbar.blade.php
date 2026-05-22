@@ -19,12 +19,10 @@
             <a href="{{ url('/tracking') }}" class="nav-pill-link {{ $active === 'tracking' ? 'is-active' : '' }}">
                 <i class="bi bi-search me-1"></i>Tracking
             </a>
-            <a href="{{ url('/module-3') }}" class="nav-pill-link {{ $active === 'module3' ? 'is-active' : '' }}">
-                <i class="bi bi-person-badge me-1"></i>Auth
-            </a>
             <a href="{{ url('/') }}" class="nav-pill-link {{ $active === 'module4' ? 'is-active' : '' }}">
                 <i class="bi bi-truck me-1"></i>Fleet & Hub
             </a>
+
             <span class="ms-2 d-flex align-items-center gap-2 text-success" style="font-size: 0.78rem; font-weight: 600;">
                 <span class="pulse-dot"></span> Online
             </span>

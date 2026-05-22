@@ -32,7 +32,7 @@ class TrackingController extends Controller
      */
     public function store(Request $request)
     {
-        $customer = \Auth::user();
+        $customer = auth('api')->user();
         
         if (!$customer) {
             return response()->json([
@@ -294,7 +294,7 @@ class TrackingController extends Controller
             $originHub = \App\Models\Hub::find($originHubId);
             $availableHubs = \App\Models\Hub::where('id', '!=', $originHubId)
                 ->orderBy('name')
-                ->get(['id', 'name', 'location_lat', 'location_long']);
+                ->get(['id', 'name']);
             
             return response()->json([
                 'status' => 'success',
@@ -321,7 +321,7 @@ class TrackingController extends Controller
      */
     public function createFromPackage(Request $request, $packageId)
     {
-        $customer = \Auth::user();
+        $customer = auth('api')->user();
         
         if (!$customer) {
             return response()->json([
@@ -410,7 +410,7 @@ class TrackingController extends Controller
      */
     public function customerShipments(Request $request)
     {
-        $customer = \Auth::user();
+        $customer = auth('api')->user();
         
         if (!$customer) {
             return response()->json([
@@ -451,7 +451,7 @@ class TrackingController extends Controller
      */
     public function customerShipmentDetail(Request $request, $trackingNumber)
     {
-        $customer = \Auth::user();
+        $customer = auth('api')->user();
         
         if (!$customer) {
             return response()->json([

@@ -141,6 +141,39 @@
 @include('layouts.partials.footer')
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    /**
+     * Global JWT Auth Guard — SiPaket Tim 1
+     * Runs on every page. Pages that require auth set @section('requires_auth','1').
+     * Also hides nav links with class="needs-auth" when not logged in.
+     */
+    (function globalAuthGuard() {
+        const TOKEN_KEY   = 'module3_jwt_token';
+        const token       = localStorage.getItem(TOKEN_KEY);
+        const requireAuth = '@yield('requires_auth')' === '1';
+
+        // Redirect ke home jika halaman butuh auth tapi tidak ada token
+        if (requireAuth && !token) {
+            window.location.replace('/home');
+            return;
+        }
+
+        // Sembunyikan/tampilkan elemen navbar berdasarkan status login
+        document.addEventListener('DOMContentLoaded', function () {
+            // Elemen yang hanya tampil saat login
+            document.querySelectorAll('.nav-needs-auth').forEach(function (el) {
+                el.style.display = token ? '' : 'none';
+            });
+            // Elemen yang hanya tampil saat belum login
+            document.querySelectorAll('.nav-no-auth').forEach(function (el) {
+                el.style.display = token ? 'none' : '';
+            });
+        });
+    })();
+</script>
+
 @stack('scripts')
 </body>
 </html>
+

@@ -3,6 +3,7 @@
 @section('title', 'Modul 2 - Timeline Paket')
 @section('meta_description', 'Timeline kronologis perjalanan paket dari asal hingga tujuan.')
 @section('active_nav', 'tracking')
+@section('requires_auth', '1')
 
 @push('styles')
 <style>

@@ -3,6 +3,7 @@
 @section('title', 'Modul 2 - Detail Paket')
 @section('meta_description', 'Detail paket dan ringkasan timeline pengiriman.')
 @section('active_nav', 'tracking')
+@section('requires_auth', '1')
 
 @push('styles')
 <style>

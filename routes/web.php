@@ -7,6 +7,10 @@ use App\Repositories\Contracts\HubRepositoryInterface;
 use App\Http\Controllers\Module1MonitoringController;
 use App\Http\Controllers\TrackingWebController;
 
+// ── Module 3: Autentikasi JWT (Dedicated Login & Register Pages) ──
+Route::get('/auth/login',    fn() => view('auth.login'))->name('auth.login');
+Route::get('/auth/register', fn() => view('auth.register'))->name('auth.register');
+
 // ── Homepage Utama ──
 Route::get('/home', function () {
     return view('pages.home.index');
@@ -28,7 +32,7 @@ Route::get('/', function (\Illuminate\Http\Request $request, HubRepositoryInterf
 // Module 1: Warehouse & Package Monitoring
 Route::get('/module-1-monitor', [Module1MonitoringController::class, 'index'])->name('module1.monitoring');
 
-// Modul 3: Customer Auth & Shipping Profile
+// Modul 3: Customer Auth & Shipping Profile (API Playground terintegrasi JWT)
 Route::get('/module-3', function () {
     return view('module3');
 })->name('module3');

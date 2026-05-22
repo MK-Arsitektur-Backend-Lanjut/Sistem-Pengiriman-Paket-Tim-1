@@ -3,6 +3,7 @@
 @section('title', 'Modul 2 - Tracking System')
 @section('meta_description', 'Monitoring dan pelacakan status pengiriman paket secara real-time.')
 @section('active_nav', 'tracking')
+@section('requires_auth', '1')
 
 @push('styles')
 <style>

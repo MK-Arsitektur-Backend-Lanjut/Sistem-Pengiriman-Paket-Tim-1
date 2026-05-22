@@ -408,6 +408,16 @@
                         <div class="hero-stat-label">Hub Nasional</div>
                     </div>
                 </div>
+
+                {{-- CTA selalu tampil, arahkan ke login --}}
+                <div class="mt-4">
+                    <a href="{{ url('/auth/login') }}" class="btn btn-light fw-bold px-4 py-2 me-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Login ke Akun
+                    </a>
+                    <a href="{{ url('/auth/register') }}" class="btn btn-outline-light fw-bold px-4 py-2">
+                        <i class="bi bi-person-plus me-1"></i> Daftar Gratis
+                    </a>
+                </div>
             </div>
             <div class="col-lg-5 d-none d-lg-block">
                 <div class="hero-icon-block">
@@ -484,7 +494,8 @@
             </div>
 
             <div class="col-md-6 col-xl-3">
-                <a href="{{ url('/module-3') }}" class="module-card mod-3">
+                {{-- Module 3: link langsung ke auth/login (tanpa overlay JS) --}}
+                <a href="{{ url('/auth/login') }}" class="module-card mod-3">
                     <div class="module-card-header">
                         <div class="module-icon-wrap"><i class="bi bi-person-badge-fill"></i></div>
                         <div>
@@ -493,16 +504,16 @@
                         </div>
                     </div>
                     <div class="module-card-body">
-                        <p class="module-desc">Autentikasi pelanggan dengan token bearer, profile pengiriman, dan kalkulasi ongkir dinamis.</p>
+                        <p class="module-desc">Autentikasi pelanggan dengan JWT Token, profile pengiriman, dan kalkulasi ongkir dinamis.</p>
                         <div>
-                            <span class="feature-pill"><i class="bi bi-check2"></i>Register/Login</span>
+                            <span class="feature-pill"><i class="bi bi-check2"></i>JWT Login</span>
                             <span class="feature-pill"><i class="bi bi-check2"></i>Bearer Token</span>
                             <span class="feature-pill"><i class="bi bi-check2"></i>Ongkir</span>
                         </div>
                     </div>
                     <div class="module-footer">
-                        <span class="badge text-white" style="background: #9333ea; font-size: 0.7rem;">Auth API</span>
-                        <span class="module-cta">Buka Modul <i class="bi bi-arrow-right"></i></span>
+                        <span class="badge text-white" style="background: #9333ea; font-size: 0.7rem;">JWT Auth</span>
+                        <span class="module-cta">Login untuk akses <i class="bi bi-arrow-right"></i></span>
                     </div>
                 </a>
             </div>
@@ -574,7 +585,7 @@
                     <span class="stack-badge"><i class="bi bi-lightning-fill text-danger"></i> Laravel 11</span>
                     <span class="stack-badge"><i class="bi bi-database-fill text-warning"></i> MySQL 8</span>
                     <span class="stack-badge"><i class="bi bi-box2-fill text-info"></i> Docker</span>
-                    <span class="stack-badge"><i class="bi bi-shield-check text-success"></i> Sanctum</span>
+                    <span class="stack-badge"><i class="bi bi-shield-lock-fill text-success"></i> JWT Auth</span>
                     <span class="stack-badge"><i class="bi bi-diagram-3-fill text-primary"></i> Repository Pattern</span>
                 </div>
             </div>
@@ -594,7 +605,9 @@
             <div class="col-md-6 d-flex gap-2 justify-content-md-end flex-wrap">
                 <a href="{{ url('/tracking') }}" class="btn btn-light btn-sm fw-bold px-3"><i class="bi bi-search me-1"></i> Lacak Paket</a>
                 <a href="{{ url('/module-1-monitor') }}" class="btn btn-outline-light btn-sm fw-bold px-3"><i class="bi bi-building me-1"></i> Monitor Gudang</a>
-                <a href="{{ url('/') }}" class="btn btn-outline-light btn-sm fw-bold px-3"><i class="bi bi-truck me-1"></i> Kelola Armada</a>
+                <a href="{{ url('/auth/login') }}" class="btn btn-outline-light btn-sm fw-bold px-3">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                </a>
             </div>
         </div>
     </div>

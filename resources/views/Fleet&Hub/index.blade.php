@@ -3,6 +3,7 @@
 @section('title', 'Modul 4 - Fleet & Hub Management')
 @section('meta_description', 'Dashboard Modul 4 untuk monitoring kapasitas hub dan manajemen armada secara real-time.')
 @section('active_nav', 'module4')
+@section('requires_auth', '1')
 
 @php
     $fleetPageItems = collect($fleets->items());

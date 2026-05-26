@@ -161,7 +161,6 @@
                     <th>Effective Weight</th>
                     <th>Dimensions (L&times;W&times;H)</th>
                     <th>Category</th>
-                    <th>Last Location</th>
                     <th>Status</th>
                     <th class="pe-4">Actions</th>
                 </tr>
@@ -204,33 +203,22 @@
                     </td>
                     <td><span class="badge bg-{{ $catColor }}">{{ ucfirst($cat) }}</span></td>
                     <td>
-                        @if($st === 'delivered')
-                        <span class="text-primary fw-semibold"><i class="bi bi-house-door-fill me-1"></i>{{ $package['destination'] }}</span>
-                        @elseif($st === 'shipped' || $st === 'in_transit')
-                        <span class="text-success"><i class="bi bi-truck me-1"></i>To {{ $package['destination'] }}</span>
-                        @elseif($hubName)
-                        <span class="hub-chip"><i class="bi bi-geo-alt-fill"></i>{{ $hubName }}</span>
-                        @else
-                        <span class="text-muted"><i class="bi bi-box me-1"></i>Origin: {{ $package['origin'] }}</span>
-                        @endif
-                    </td>
-                    <td>
                         <span class="badge bg-{{ $bg }}">{{ ucfirst(str_replace('_',' ',$st)) }}</span>
                     </td>
                     <td class="pe-4">
                         <button onclick="editPackage({{ $package['id'] }})" class="btn btn-warning btn-sm me-1"><i class="bi bi-pencil"></i></button>
                         <button onclick="deletePackage({{ $package['id'] }})" class="btn btn-danger btn-sm me-1"><i class="bi bi-trash"></i></button>
-                        @if($hubId)
-                        <button onclick="openFleetModal({{ $hubId }},'{{ addslashes($hubName) }}')" class="btn btn-primary btn-sm rounded-pill me-1"><i class="bi bi-radar me-1"></i>Track</button>
-                        @endif
-                        <button onclick="openCreateShipmentModal({{ $package['id'] }}, '{{ addslashes($package['tracking_number']) }}')" class="btn btn-success btn-sm rounded-pill"><i class="bi bi-box-arrow-right me-1"></i>Shipment</button>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="10" class="text-center text-muted py-5">No packages found.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-5">No packages found.</td></tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+    <!-- Pagination Links -->
+    <div class="d-flex justify-content-center py-3 border-top">
+        {{ $packages->links() }}
     </div>
 </div>
 </div>
@@ -269,7 +257,7 @@
                                 <input type="hidden" id="warehouse_usage" value="0">
                             </div>
                         </div>
-                        <div class="col-md-6"><div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="warehouse_status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="warehouse_status"><option value="available">Available</option><option value="full">Full</option><option value="overload">Overload</option></select></div></div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -12,28 +12,36 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * Urutan eksekusi PENTING karena ada FK dependencies:
+     * 1. Users        (M3 dependency)
+     * 2. Hubs         (M4 — dibutuhkan Warehouses & Fleets)
+     * 3. Fleets       (M4 — dibutuhkan ShipmentLogSeeder)
+     * 4. FleetLogs    (M4 — 5.000 log armada per requirement)
+     * 5. Module1      (Warehouse & Packages awal)
+     * 6. PackageSeeder (1.000 packages — M2 dependency)
+     * 7. ShipmentLogSeeder (25.000 log tracking — M2 core requirement)
      */
     public function run(): void
     {
-        // Create test users FIRST (needed by ShipmentSeeder)
+        // M3: Buat users terlebih dahulu
         User::factory(100)->create();
-        
-        // Create primary test user
+
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'phone' => '081234567890',
-            'address' => 'Jl. Contoh No. 1, Jakarta',
+            'name'        => 'Test User',
+            'email'       => 'test@example.com',
+            'phone'       => '081234567890',
+            'address'     => 'Jl. Contoh No. 1, Jakarta',
             'is_customer' => true,
         ]);
 
-        // Run all seeders
         $this->call([
-            HubSeeder::class,
-            FleetSeeder::class,
-            FleetLogSeeder::class,   // 5.000+ log armada (ketentuan teknis UTS)
-            Module1Seeder::class,
-            ShipmentSeeder::class,  // Modul 2 Tracking System
+            HubSeeder::class,           // M4: Hub (dibutuhkan oleh Warehouse & Fleet)
+            FleetSeeder::class,         // M4: Armada
+            FleetLogSeeder::class,      // M4: 5.000+ log armada (requirement teknis)
+            Module1Seeder::class,       // M1: Warehouse
+            PackageSeeder::class,       // M1: 1.000 packages (untuk M2)
+            ShipmentLogSeeder::class,   // M2: 25.000 log tracking (requirement teknis)
         ]);
     }
 }

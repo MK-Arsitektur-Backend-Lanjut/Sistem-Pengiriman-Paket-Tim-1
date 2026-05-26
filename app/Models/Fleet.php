@@ -29,10 +29,10 @@ class Fleet extends Model
     }
 
     /**
-     * M2 Integration: Shipments assigned to this fleet
+     * M2 Integration: Log pengiriman yang melibatkan armada ini
      */
-    public function shipments()
+    public function shipmentLogs()
     {
-        return $this->hasMany(Shipment::class, 'fleet_id');
+        return $this->hasMany(ShipmentLog::class, 'fleet_id');
     }
 }

@@ -52,17 +52,34 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-lg-4">
                             <form id="calculatorForm" class="row g-3 align-items-end">
-                                <div class="col-12 col-md-3">
+                                <div class="col-12 mb-2">
+                                    <label class="form-label fw-semibold d-block">Calculation Mode</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="calc_mode" id="modeManual" value="manual" checked onchange="toggleCalcMode('manual')">
+                                        <label class="form-check-label" for="modeManual">Manual Input</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="calc_mode" id="modePackage" value="package" onchange="toggleCalcMode('package')">
+                                        <label class="form-check-label" for="modePackage">Select Registered Package</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6" id="packageSelectContainer" style="display: none;">
+                                    <label class="form-label fw-semibold">Select Package</label>
+                                    <select id="packageSelect" name="package_id" class="form-select form-select-sm">
+                                        <option value="">-- Choose Package --</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3" id="weightContainer">
                                     <label class="form-label fw-semibold">Weight (kg)</label>
                                     <div class="input-group input-group-sm">
-                                        <input name="weight_kg" type="number" step="0.1" min="0.1" class="form-control" required>
+                                        <input id="calcWeightInput" name="weight_kg" type="number" step="0.1" min="0.1" class="form-control" required>
                                         <span class="input-group-text">kg</span>
                                     </div>
                                 </div>
-                                <div class="col-12 col-md-3">
+                                <div class="col-12 col-md-3" id="distanceContainer">
                                     <label class="form-label fw-semibold">Distance (km)</label>
                                     <div class="input-group input-group-sm">
-                                        <input name="distance_km" type="number" step="0.1" min="1" class="form-control" required>
+                                        <input id="calcDistanceInput" name="distance_km" type="number" step="0.1" min="1" class="form-control" required>
                                         <span class="input-group-text">km</span>
                                     </div>
                                 </div>
@@ -99,6 +116,19 @@
                                     </button>
                                 </div>
                             </form>
+
+                            <div id="packageDetailsContainer" class="card bg-light border-0 p-3 mt-4" style="display: none; border-radius: 12px;">
+                                <h6 class="fw-bold mb-2 text-primary"><i class="bi bi-box-seam me-1"></i> Package Details</h6>
+                                <div class="row g-2 small">
+                                    <div class="col-12 col-md-4"><strong>Tracking #:</strong> <span id="detailTracking" class="text-primary fw-bold">-</span></div>
+                                    <div class="col-12 col-md-8"><strong>Route:</strong> <span id="detailRoute">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Dimensions:</strong> <span id="detailDimensions">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Actual Weight:</strong> <span id="detailActualWeight">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Volumetric Weight:</strong> <span id="detailVolumetricWeight">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Effective Weight:</strong> <span id="detailEffectiveWeight" class="fw-bold text-success">-</span></div>
+                                    <div class="col-12 col-md-8"><strong>Calculated Distance:</strong> <span id="detailDistance" class="fw-bold text-success">-</span></div>
+                                </div>
+                            </div>
 
                             <div class="table-responsive mt-4">
                                 <table class="table table-hover align-middle shadow-sm rounded-3 overflow-hidden">
@@ -231,15 +261,76 @@
         return payload;
     }
 
+    let packagesLoaded = false;
+
+    async function loadPackages() {
+        if (packagesLoaded) return;
+        try {
+            const select = document.getElementById('packageSelect');
+            select.innerHTML = '<option value="">-- Loading packages... --</option>';
+            const response = await callApi('/package', 'GET', null, false);
+            select.innerHTML = '<option value="">-- Choose Package --</option>';
+            if (response && response.success && response.data) {
+                response.data.forEach(pkg => {
+                    select.innerHTML += `<option value="${pkg.id}">${pkg.tracking_number} (${pkg.origin} ➔ ${pkg.destination}) - ${pkg.weight} kg</option>`;
+                });
+                packagesLoaded = true;
+            } else {
+                select.innerHTML = '<option value="">Failed to load packages</option>';
+            }
+        } catch (error) {
+            console.error('Error loading packages:', error);
+            document.getElementById('packageSelect').innerHTML = '<option value="">Error loading packages</option>';
+        }
+    }
+
+    function toggleCalcMode(mode) {
+        const packageSelectContainer = document.getElementById('packageSelectContainer');
+        const weightContainer = document.getElementById('weightContainer');
+        const distanceContainer = document.getElementById('distanceContainer');
+        const packageSelect = document.getElementById('packageSelect');
+        const calcWeightInput = document.getElementById('calcWeightInput');
+        const calcDistanceInput = document.getElementById('calcDistanceInput');
+
+        if (mode === 'package') {
+            packageSelectContainer.style.display = 'block';
+            weightContainer.style.display = 'none';
+            distanceContainer.style.display = 'none';
+
+            packageSelect.setAttribute('required', 'required');
+            calcWeightInput.removeAttribute('required');
+            calcDistanceInput.removeAttribute('required');
+
+            loadPackages();
+        } else {
+            packageSelectContainer.style.display = 'none';
+            weightContainer.style.display = 'block';
+            distanceContainer.style.display = 'block';
+
+            packageSelect.removeAttribute('required');
+            calcWeightInput.setAttribute('required', 'required');
+            calcDistanceInput.setAttribute('required', 'required');
+        }
+    }
+
     document.getElementById('calculatorForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
             const payload = formToObject(event.target);
             payload.is_fragile = document.getElementById('isFragile').checked;
             payload.use_insurance = document.getElementById('useInsurance').checked;
-            payload.weight_kg = Number(payload.weight_kg);
-            payload.distance_km = Number(payload.distance_km);
             payload.declared_value = Number(payload.declared_value || 0);
+
+            const isPackageMode = document.getElementById('modePackage').checked;
+            if (isPackageMode) {
+                payload.package_id = Number(payload.package_id);
+                delete payload.weight_kg;
+                delete payload.distance_km;
+            } else {
+                payload.weight_kg = Number(payload.weight_kg);
+                payload.distance_km = Number(payload.distance_km);
+                delete payload.package_id;
+            }
 
             const result = await callApi('/customer/shipping-cost/calculate', 'POST', payload, true);
             const breakdown = result.data?.cost_breakdown || {};
@@ -252,6 +343,22 @@
             document.getElementById('calcInsurance').textContent = toCurrency(breakdown.insurance_cost);
             document.getElementById('calcTotal').textContent = toCurrency(result.data?.total_cost || 0);
             document.getElementById('calcSla').textContent = `${result.data?.estimated_sla_days ?? '-'} hari`;
+
+            // Display package details if package mode is active and details returned
+            const detailsContainer = document.getElementById('packageDetailsContainer');
+            const details = result.data?.package_details;
+            if (details) {
+                detailsContainer.style.display = 'block';
+                document.getElementById('detailTracking').textContent = details.tracking_number;
+                document.getElementById('detailRoute').textContent = `${details.origin} ➔ ${details.destination}`;
+                document.getElementById('detailDimensions').textContent = details.dimensions;
+                document.getElementById('detailActualWeight').textContent = `${details.actual_weight} kg`;
+                document.getElementById('detailVolumetricWeight').textContent = `${details.volumetric_weight} kg`;
+                document.getElementById('detailEffectiveWeight').textContent = `${details.effective_weight} kg`;
+                document.getElementById('detailDistance').textContent = `${details.calculated_distance_km} km`;
+            } else {
+                detailsContainer.style.display = 'none';
+            }
 
             showAlert(result.message || 'Perhitungan ongkir berhasil.', 'success');
         } catch (error) {

@@ -99,7 +99,7 @@
             destination_hub_id: destinationHubId
         }, {
             headers: {
-                'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
+                'Authorization': 'Bearer ' + (localStorage.getItem('module3_jwt_token') || localStorage.getItem('token') || ''),
                 'Content-Type': 'application/json'
             }
         })

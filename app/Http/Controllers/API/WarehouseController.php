@@ -43,6 +43,18 @@ class WarehouseController extends Controller
             $payload = $request->validated();
             $payload['current_load'] = $payload['current_load'] ?? 0;
 
+            // Automatically determine status based on capacity & current_load
+            $capacity = (int) ($payload['capacity'] ?? 0);
+            $load = (int) $payload['current_load'];
+            $percentage = $capacity > 0 ? ($load / $capacity) * 100 : 0;
+            if ($percentage >= 100) {
+                $payload['status'] = 'overload';
+            } elseif ($percentage >= 90) {
+                $payload['status'] = 'full';
+            } else {
+                $payload['status'] = 'available';
+            }
+
             $warehouse = Warehouse::create($payload);
 
             $this->applyHubLoadChange($warehouse->hub_id, (int) $warehouse->current_load);
@@ -121,7 +133,21 @@ class WarehouseController extends Controller
             $oldHubId = $warehouse->hub_id;
             $oldCurrentLoad = (int) $warehouse->current_load;
 
-            $warehouse->update($request->validated());
+            $payload = $request->validated();
+            
+            // Recalculate status based on new capacity & current_load, fallback to existing ones
+            $capacity = isset($payload['capacity']) ? (int) $payload['capacity'] : (int) $warehouse->capacity;
+            $load = isset($payload['current_load']) ? (int) $payload['current_load'] : (int) $warehouse->current_load;
+            $percentage = $capacity > 0 ? ($load / $capacity) * 100 : 0;
+            if ($percentage >= 100) {
+                $payload['status'] = 'overload';
+            } elseif ($percentage >= 90) {
+                $payload['status'] = 'full';
+            } else {
+                $payload['status'] = 'available';
+            }
+
+            $warehouse->update($payload);
             
             // Refresh warehouse data
             $warehouse->refresh();

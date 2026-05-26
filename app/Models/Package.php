@@ -27,13 +27,15 @@ class Package extends Model
     ];
 
     protected $casts = [
-        'weight' => 'float',
-        'length' => 'float',
-        'width' => 'float',
-        'height' => 'float',
-        'volume' => 'float',
+        'weight'       => 'float',
+        'length'       => 'float',
+        'width'        => 'float',
+        'height'       => 'float',
+        'volume'       => 'float',
         'warehouse_id' => 'integer',
     ];
+
+    // ── Relationships ──────────────────────────────────────────────────
 
     public function warehouse()
     {
@@ -41,14 +43,24 @@ class Package extends Model
     }
 
     /**
-     * M2 Integration: Shipment for this package (one-to-one)
+     * M2 Integration: Semua log perjalanan paket (kronologis)
      */
-    public function shipment()
+    public function shipmentLogs()
     {
-        return $this->hasOne(Shipment::class, 'package_id');
+        return $this->hasMany(ShipmentLog::class)->orderBy('recorded_at');
     }
 
-    public function getDimensionCategory()
+    /**
+     * M2 Integration: Log terbaru (status terakhir paket)
+     */
+    public function latestLog()
+    {
+        return $this->hasOne(ShipmentLog::class)->latestOfMany('recorded_at');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+
+    public function getDimensionCategory(): string
     {
         if ($this->volume <= 1000) {
             return 'small';

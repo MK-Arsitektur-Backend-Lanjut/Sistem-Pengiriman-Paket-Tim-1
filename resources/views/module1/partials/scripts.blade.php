@@ -53,7 +53,7 @@
                 document.getElementById('warehouse_hub_id').value = data.hub_id || '';
                 document.getElementById('warehouse_capacity').value = data.capacity || '';
                 document.getElementById('warehouse_current_load').value = data.current_load || 0;
-                document.getElementById('warehouse_status').value = data.status || 'active';
+                document.getElementById('warehouse_status').value = data.status || 'available';
                 
                 calculateUsagePercentage();
                 
@@ -95,7 +95,18 @@
                     alert('Error: ' + response.data.message);
                 }
             })
-            .catch(error => alert('Error saving warehouse'));
+            .catch(error => {
+                if (error.response && error.response.data) {
+                    let msg = error.response.data.message;
+                    if (error.response.data.errors) {
+                        const errs = Object.values(error.response.data.errors).flat();
+                        msg += '\n- ' + errs.join('\n- ');
+                    }
+                    alert('Error: ' + msg);
+                } else {
+                    alert('Error saving warehouse');
+                }
+            });
     }
 
     function deleteWarehouse(id) {

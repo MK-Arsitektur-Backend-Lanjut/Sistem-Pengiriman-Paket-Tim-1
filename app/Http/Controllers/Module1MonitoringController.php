@@ -24,10 +24,60 @@ class Module1MonitoringController extends Controller
                 [CacheService::TAG_WAREHOUSE, CacheService::TAG_STATS]
             );
 
-            // ── Cache package list (1 menit – lebih sering berubah) ──────────
-            $packagesByDimension = CacheService::remember(
-                CacheService::keyPackageList(),
-                fn () => $this->buildPackageList(),
+            // ── Cache package stats (1 menit) ────────────────────────────────
+            $packageStats = CacheService::remember(
+                'packages:stats',
+                fn () => [
+                    'total' => Package::count(),
+                    'by_status' => Package::selectRaw('package_status as status, count(*) as count')
+                        ->groupBy('package_status')
+                        ->pluck('count', 'status')
+                        ->toArray(),
+                    'by_dimension' => [
+                        'small'  => Package::where('volume', '<=', 1000)->count(),
+                        'medium' => Package::where('volume', '>', 1000)->where('volume', '<=', 5000)->count(),
+                        'large'  => Package::where('volume', '>', 5000)->count(),
+                    ]
+                ],
+                CacheService::TTL_SHORT,
+                [CacheService::TAG_PACKAGE, CacheService::TAG_STATS]
+            );
+
+            // ── Paginated Package List (caching per page) ────────────────────
+            $page = request()->query('page', 1);
+            $packages = CacheService::remember(
+                'packages:list:page:' . $page,
+                function () {
+                    return Package::with(['warehouse.hub'])
+                        ->orderBy('created_at', 'desc')
+                        ->paginate(10)
+                        ->through(function ($package) {
+                            return [
+                                'id'               => $package->id,
+                                'tracking_number'  => $package->tracking_number,
+                                'sender_name'      => $package->sender_name,
+                                'receiver_name'    => $package->receiver_name,
+                                'origin'           => $package->origin,
+                                'destination'      => $package->destination,
+                                'weight'           => $package->weight,
+                                'length'           => $package->length,
+                                'width'            => $package->width,
+                                'height'           => $package->height,
+                                'volume'           => $package->volume,
+                                'dimension_category' => $package->getDimensionCategory(),
+                                'warehouse'        => $package->warehouse ? [
+                                    'id'             => $package->warehouse->id,
+                                    'hub_id'         => $package->warehouse->hub_id,
+                                    'warehouse_name' => $package->warehouse->warehouse_name,
+                                    'hub'            => $package->warehouse->hub ? [
+                                        'name' => $package->warehouse->hub->name
+                                    ] : null
+                                ] : null,
+                                'status'           => $package->package_status,
+                                'created_at'       => $package->created_at->format('Y-m-d H:i:s'),
+                            ];
+                        });
+                },
                 CacheService::TTL_SHORT,
                 [CacheService::TAG_PACKAGE]
             );
@@ -40,8 +90,6 @@ class Module1MonitoringController extends Controller
                 [CacheService::TAG_HUB]
             );
 
-            $dimensionCategories = $packagesByDimension->groupBy('dimension_category')->map->count();
-
             $data = [
                 // Warehouse Statistics
                 'total_warehouses'       => $warehouseStats['total_warehouses'],
@@ -51,13 +99,13 @@ class Module1MonitoringController extends Controller
                 'overall_usage_percentage' => $warehouseStats['overall_usage_percentage'],
 
                 // Package Statistics
-                'total_packages'         => $packagesByDimension->count(),
-                'packages_by_status'     => $packagesByDimension->groupBy('status')->map->count(),
-                'packages_by_dimension'  => $dimensionCategories,
+                'total_packages'         => $packageStats['total'],
+                'packages_by_status'     => collect($packageStats['by_status']),
+                'packages_by_dimension'  => collect($packageStats['by_dimension']),
 
                 // Data Lists
                 'warehouses'             => $warehouseStats['warehouses'],
-                'packages'               => $packagesByDimension,
+                'packages'               => $packages,
                 'all_hubs'               => $hubs,
 
                 // Chart data
@@ -79,7 +127,7 @@ class Module1MonitoringController extends Controller
                 'packages_by_status'     => collect(),
                 'packages_by_dimension'  => collect(),
                 'warehouses'             => collect(),
-                'packages'               => collect(),
+                'packages'               => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
                 'all_hubs'               => collect(),
                 'warehouse_names'        => [],
                 'warehouse_loads'        => [],

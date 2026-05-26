@@ -264,5 +264,29 @@
     .status-badge-idle        { background: #ecfdf5; color: #166534; border: 1px solid #bbf7d0; border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.75rem; font-weight: 600; }
     .status-badge-in_transit  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.75rem; font-weight: 600; }
     .status-badge-maintenance { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.75rem; font-weight: 600; }
+
+    /* Custom Sleek Scrollbar for Table Responsive */
+    .table-responsive {
+        scrollbar-width: auto;
+        scrollbar-color: #cbd5e1 #f8fafc;
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+    }
+    .table-responsive::-webkit-scrollbar {
+        height: 10px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 8px;
+        border: 2px solid #f8fafc;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
 </style>
 @endpush

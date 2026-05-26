@@ -56,9 +56,14 @@ class PackageSeeder extends Seeder
             'Bogor', 'Malang', 'Solo', 'Tasikmalaya', 'Kediri',
         ];
 
+        // Disable FK checks to safely truncate and insert
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('packages')->truncate();
+
         $packages = [];
         $now      = now();
-        $total    = 1000;
+        $total    = 25000;
+        $batchSize = 1000;
 
         for ($i = 1; $i <= $total; $i++) {
             [$length, $width, $height] = $this->randomDimension();
@@ -67,7 +72,7 @@ class PackageSeeder extends Seeder
 
             // Status awal selalu 'registered' — akan diupdate oleh ShipmentLogSeeder
             $packages[] = [
-                'tracking_number' => 'PKG-2026-' . str_pad($i, 4, '0', STR_PAD_LEFT),
+                'tracking_number' => 'PKG-2026-' . str_pad($i, 6, '0', STR_PAD_LEFT),
                 'sender_name'     => $senders[array_rand($senders)],
                 'receiver_name'   => $receivers[array_rand($receivers)],
                 'origin'          => $cities[array_rand($cities)],
@@ -83,8 +88,8 @@ class PackageSeeder extends Seeder
                 'updated_at'      => $now,
             ];
 
-            // Bulk insert setiap 200
-            if ($i % 200 === 0) {
+            // Bulk insert setiap batchSize
+            if ($i % $batchSize === 0) {
                 DB::table('packages')->insert($packages);
                 $this->command->info("  ✓ {$i} packages inserted...");
                 $packages = [];
@@ -95,6 +100,8 @@ class PackageSeeder extends Seeder
         if (!empty($packages)) {
             DB::table('packages')->insert($packages);
         }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // Recalculate warehouse loads
         $this->command->info('Recalculating warehouse loads...');

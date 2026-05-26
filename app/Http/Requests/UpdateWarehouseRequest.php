@@ -26,7 +26,7 @@ class UpdateWarehouseRequest extends FormRequest
             'location' => 'nullable|string|max:255',
             'capacity' => 'nullable|integer|min:1',
             'current_load' => 'nullable|integer|min:0',
-            'status' => 'nullable|in:available,full,overload',
+            'status' => 'nullable|in:active,inactive',
             'hub_id' => 'nullable|exists:hubs,id',
         ];
     }

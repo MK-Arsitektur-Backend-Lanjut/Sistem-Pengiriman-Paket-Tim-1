@@ -106,7 +106,7 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-4">Name</th><th>Location</th><th>Linked Hub</th>
+                    <th class="ps-4">Name</th><th>Location</th>
                     <th>Capacity</th><th>Current Load</th><th>Usage %</th><th>Status</th><th class="pe-4">Actions</th>
                 </tr>
             </thead>
@@ -114,8 +114,7 @@
                 @forelse($warehouses as $warehouse)
                 <tr>
                     <td class="ps-4 fw-semibold text-primary">{{ $warehouse['warehouse_name'] }}</td>
-                    <td class="text-muted">{{ $warehouse['location'] }}</td>
-                    <td>@if($warehouse['hub_name'] ?? false)<span class="hub-chip"><i class="bi bi-geo-alt-fill"></i>{{ $warehouse['hub_name'] }}</span>@else<span class="text-muted">-</span>@endif</td>
+                    <td><span class="hub-chip"><i class="bi bi-geo-alt-fill"></i> {{ $warehouse['location'] }}</span></td>
                     <td>{{ number_format($warehouse['capacity']) }}</td>
                     <td>{{ number_format($warehouse['current_load']) }}</td>
                     <td>
@@ -138,7 +137,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="9" class="text-center text-muted py-5">No warehouses found.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-5">No warehouses found.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -179,9 +178,10 @@
                     
                     $st = strtolower($package['status'] ?? 'registered');
                     $bg = 'secondary';
-                    if ($st === 'pending') $bg = 'danger';
+                    if ($st === 'pending' || $st === 'failed') $bg = 'danger';
                     elseif ($st === 'delivered') $bg = 'primary';
                     elseif ($st === 'shipped' || $st === 'in_transit') $bg = 'success';
+                    elseif ($st === 'arrived_at_hub') $bg = 'info';
                 @endphp
                 <tr>
                     <td class="ps-4 fw-bold text-primary">{{ $package['tracking_number'] }}</td>
@@ -236,7 +236,7 @@
                     <input type="hidden" id="warehouseId">
                     <div class="mb-3"><label class="form-label">Warehouse Name</label><input type="text" class="form-control" id="warehouse_name" required></div>
                     <div class="mb-3"><label class="form-label">Location</label><input type="text" class="form-control" id="warehouse_location" required></div>
-                    <div class="mb-3">
+                    <div class="mb-3 d-none">
                         <label class="form-label">Linked Hub</label>
                         <select class="form-select" id="warehouse_hub_id">
                             <option value="">- No Hub -</option>
@@ -257,7 +257,7 @@
                                 <input type="hidden" id="warehouse_usage" value="0">
                             </div>
                         </div>
-                        <div class="col-md-6"><div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="warehouse_status"><option value="available">Available</option><option value="full">Full</option><option value="overload">Overload</option></select></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="warehouse_status" name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -295,7 +295,7 @@
                         <div class="col-md-6 mb-3"><label class="form-label">Sender Name</label><input type="text" class="form-control" id="sender_name" required></div>
                         <div class="col-md-6 mb-3"><label class="form-label">Receiver Name</label><input type="text" class="form-control" id="receiver_name" required></div>
                     </div>
-                    <div class="row">
+                    <div class="row" id="origin_destination_row">
                         <div class="col-md-6 mb-3"><label class="form-label">Origin</label><input type="text" class="form-control" id="origin" required oninput="updateLocation()"></div>
                         <div class="col-md-6 mb-3"><label class="form-label">Destination</label><input type="text" class="form-control" id="destination" required oninput="updateLocation()"></div>
                     </div>
@@ -307,6 +307,8 @@
                                 <option value="registered">Registered</option>
                                 <option value="shipped">Shipped</option>
                                 <option value="delivered">Delivered</option>
+                                <option value="failed">Failed</option>
+                                <option value="arrived_at_hub">Arrived at Hub</option>
                             </select>
                         </div>
                     </div>

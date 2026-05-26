@@ -30,8 +30,9 @@ Route::get('/fleet', function (\Illuminate\Http\Request $request, HubRepositoryI
     $hubs = $hubRepo->getAllHubs($request->search_hub);
     $allHubs = \App\Models\Hub::orderBy('name')->get();
     $fleets = $fleetRepo->getAllFleets($request->search_fleet); // returns pagination
+    $warehouses = \App\Models\Warehouse::all();
     
-    return view('Fleet&Hub.index', compact('hubs', 'allHubs', 'fleets'));
+    return view('Fleet&Hub.index', compact('hubs', 'allHubs', 'fleets', 'warehouses'));
 });
 
 // Module 1: Warehouse & Package Monitoring

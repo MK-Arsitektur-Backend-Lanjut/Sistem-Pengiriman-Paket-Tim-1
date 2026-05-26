@@ -139,6 +139,11 @@
             catEl.textContent = '-';
         }
         
+        const originDestRow = document.getElementById('origin_destination_row');
+        if (originDestRow) {
+            originDestRow.classList.remove('d-none');
+        }
+        
         updateLocation();
         
         loadFleetOptions(); // Load fleets for dropdown
@@ -168,6 +173,11 @@
                 
                 document.getElementById('packageModalTitle').textContent = 'Edit Package';
                 document.getElementById('packageSubmitBtn').textContent = 'Update';
+                
+                const originDestRow = document.getElementById('origin_destination_row');
+                if (originDestRow) {
+                    originDestRow.classList.add('d-none');
+                }
                 
                 updateVolumetric();
                 loadFleetOptions();

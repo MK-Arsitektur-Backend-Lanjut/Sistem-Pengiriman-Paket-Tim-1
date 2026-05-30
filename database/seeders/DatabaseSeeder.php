@@ -40,8 +40,7 @@ class DatabaseSeeder extends Seeder
             FleetSeeder::class,         // M4: Armada
             FleetLogSeeder::class,      // M4: 5.000+ log armada (requirement teknis)
             Module1Seeder::class,       // M1: Warehouse
-            PackageSeeder::class,       // M1: 1.000 packages (untuk M2)
-            ShipmentLogSeeder::class,   // M2: 25.000 log tracking (requirement teknis)
+            PackageSeeder::class,       // M1: 25.000 packages
         ]);
     }
 }

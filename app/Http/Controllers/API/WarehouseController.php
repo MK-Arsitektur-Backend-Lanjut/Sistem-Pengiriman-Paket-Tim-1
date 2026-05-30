@@ -44,8 +44,20 @@ class WarehouseController extends Controller
             $payload = $request->validated();
             $payload['current_load'] = $payload['current_load'] ?? 0;
 
-            // Use status provided from client, fallback to 'active'
-            $payload['status'] = $payload['status'] ?? 'active';
+            // Use status provided from client, fallback to calculated status based on capacity & current_load
+            if (!isset($payload['status'])) {
+                $capacity = (int) ($payload['capacity'] ?? 0);
+                $currentLoad = (int) ($payload['current_load'] ?? 0);
+                $percentage = $capacity > 0 ? ($currentLoad / $capacity) * 100 : 0;
+                
+                $status = 'available';
+                if ($percentage >= 100) {
+                    $status = 'overload';
+                } elseif ($percentage >= 90) {
+                    $status = 'full';
+                }
+                $payload['status'] = $status;
+            }
 
             $warehouse = Warehouse::create($payload);
 
@@ -133,9 +145,23 @@ class WarehouseController extends Controller
 
             $payload = $request->validated();
             
-            // Use status from payload if present, else keep existing
+            // Use status from payload if present, else recalculate or keep existing
             if (!isset($payload['status'])) {
-                $payload['status'] = $warehouse->status;
+                if (isset($payload['capacity']) || isset($payload['current_load'])) {
+                    $capacity = (int) ($payload['capacity'] ?? $warehouse->capacity ?? 0);
+                    $currentLoad = (int) ($payload['current_load'] ?? $warehouse->current_load ?? 0);
+                    $percentage = $capacity > 0 ? ($currentLoad / $capacity) * 100 : 0;
+                    
+                    $status = 'available';
+                    if ($percentage >= 100) {
+                        $status = 'overload';
+                    } elseif ($percentage >= 90) {
+                        $status = 'full';
+                    }
+                    $payload['status'] = $status;
+                } else {
+                    $payload['status'] = $warehouse->status;
+                }
             }
 
             $warehouse->update($payload);

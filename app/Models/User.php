@@ -64,11 +64,5 @@ class User extends Authenticatable implements JWTSubject
         return [];
     }
 
-    /**
-     * M2 Integration: Log tracking yang dicatat oleh user ini (sebagai petugas)
-     */
-    public function recordedLogs()
-    {
-        return $this->hasMany(ShipmentLog::class, 'recorded_by');
-    }
+
 }

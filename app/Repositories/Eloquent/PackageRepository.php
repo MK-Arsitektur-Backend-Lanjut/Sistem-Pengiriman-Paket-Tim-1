@@ -40,6 +40,32 @@ class PackageRepository implements PackageRepositoryInterface
         return $query->get();
     }
 
+    public function getAllPackagesPaginated($filters = [], $perPage = 15)
+    {
+        $query = Package::with(['warehouse.hub', 'hub', 'fleet', 'latestLog'])->orderByDesc('created_at');
+
+        if (isset($filters['warehouse_id'])) {
+            $query->where('warehouse_id', $filters['warehouse_id']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('package_status', $filters['status']);
+        }
+
+        if (isset($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('tracking_number', 'like', "%{$search}%")
+                  ->orWhere('sender_name', 'like', "%{$search}%")
+                  ->orWhere('receiver_name', 'like', "%{$search}%")
+                  ->orWhere('origin', 'like', "%{$search}%")
+                  ->orWhere('destination', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->paginate($perPage);
+    }
+
     public function getPackageById($id)
     {
         return Package::with('warehouse')->findOrFail($id);
@@ -190,5 +216,53 @@ class PackageRepository implements PackageRepositoryInterface
                 return $p->getDimensionCategory() === 'large';
             })->values(),
         ];
+    }
+
+    public function findPackageByTrackingNumber(string $trackingNumber)
+    {
+        $cacheKey = \App\Services\CacheService::keyShipmentByTracking($trackingNumber);
+
+        return \App\Services\CacheService::remember(
+            $cacheKey,
+            fn () => Package::with(['warehouse.hub', 'hub', 'fleet', 'histories.hub', 'histories.fleet', 'latestLog'])
+                ->where('tracking_number', $trackingNumber)
+                ->firstOrFail(),
+            \App\Services\CacheService::TTL_SHORT,
+            [\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE]
+        );
+    }
+
+    public function updatePackageStatus(string $trackingNumber, array $data)
+    {
+        $package = Package::where('tracking_number', $trackingNumber)->firstOrFail();
+
+        $updateData = [];
+        if (isset($data['status'])) {
+            $updateData['package_status'] = $data['status'];
+        }
+        if (array_key_exists('hub_id', $data)) {
+            $updateData['hub_id'] = $data['hub_id'];
+        }
+        if (array_key_exists('fleet_id', $data)) {
+            $updateData['fleet_id'] = $data['fleet_id'];
+        }
+
+        $package->update($updateData);
+
+        // Catat riwayat di tabel package_histories
+        \App\Models\PackageHistory::create([
+            'package_id'  => $package->id,
+            'status'      => $data['status'] ?? $package->package_status,
+            'hub_id'      => array_key_exists('hub_id', $data) ? $data['hub_id'] : $package->hub_id,
+            'fleet_id'    => array_key_exists('fleet_id', $data) ? $data['fleet_id'] : $package->fleet_id,
+            'notes'       => $data['notes'] ?? null,
+            'recorded_at' => $data['recorded_at'] ?? now(),
+        ]);
+
+        // Invalidasi cache
+        \App\Services\CacheService::forget(\App\Services\CacheService::keyShipmentByTracking($trackingNumber));
+        \App\Services\CacheService::flushTag(\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE);
+
+        return $package->fresh(['warehouse.hub', 'hub', 'fleet', 'histories.hub', 'histories.fleet']);
     }
 }

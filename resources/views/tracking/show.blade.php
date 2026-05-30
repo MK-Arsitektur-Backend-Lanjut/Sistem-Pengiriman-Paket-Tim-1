@@ -220,6 +220,88 @@
                 </div>
             </div>
 
+            <!-- Form Update Status (Admin/Staff Only Simulation) -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-light border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square"></i> Update Status / Lokasi</h5>
+                </div>
+                <div class="card-body">
+                    @if(in_array($package->package_status, ['delivered', 'failed', 'returned']))
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Status sudah final. Tidak dapat diubah.
+                        </div>
+                    @else
+                        <!-- Success / Error messages -->
+                        @if(session('success'))
+                            <div class="alert alert-success alert-dismissible fade show small py-2" role="alert">
+                                {{ session('success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 0.75rem;"></button>
+                            </div>
+                        @endif
+                        @if(session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show small py-2" role="alert">
+                                {{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 0.75rem;"></button>
+                            </div>
+                        @endif
+
+                        <form action="{{ route('tracking.updateStatus', $package->tracking_number) }}" method="POST">
+                            @csrf
+                            <!-- Status Dropdown -->
+                            <div class="mb-3">
+                                <label for="status" class="form-label small fw-bold text-muted">Status Baru</label>
+                                <select name="status" id="status" class="form-select select-sm">
+                                    <option value="registered" {{ $package->package_status === 'registered' ? 'selected' : '' }}>Terdaftar (di Gudang)</option>
+                                    <option value="picked_up" {{ $package->package_status === 'picked_up' ? 'selected' : '' }}>Dijemput Armada</option>
+                                    <option value="in_transit" {{ $package->package_status === 'in_transit' ? 'selected' : '' }}>Dalam Perjalanan</option>
+                                    <option value="arrived_at_hub" {{ $package->package_status === 'arrived_at_hub' ? 'selected' : '' }}>Tiba di Hub Transit</option>
+                                    <option value="out_for_delivery" {{ $package->package_status === 'out_for_delivery' ? 'selected' : '' }}>Sedang Diantar</option>
+                                    <option value="delivered" {{ $package->package_status === 'delivered' ? 'selected' : '' }}>Terkirim</option>
+                                    <option value="failed" {{ $package->package_status === 'failed' ? 'selected' : '' }}>Gagal Kirim</option>
+                                    <option value="returned" {{ $package->package_status === 'returned' ? 'selected' : '' }}>Dikembalikan</option>
+                                </select>
+                            </div>
+
+                            <!-- Hub Dropdown -->
+                            <div class="mb-3" id="hub_input_container">
+                                <label for="hub_id" class="form-label small fw-bold text-muted">Lokasi Hub Transit</label>
+                                <select name="hub_id" id="hub_id" class="form-select select-sm">
+                                    <option value="">-- Pilih Hub (Opsional) --</option>
+                                    @foreach($hubs as $hub)
+                                        <option value="{{ $hub->id }}" {{ $package->hub_id == $hub->id ? 'selected' : '' }}>
+                                            {{ $hub->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Fleet Dropdown -->
+                            <div class="mb-3" id="fleet_input_container">
+                                <label for="fleet_id" class="form-label small fw-bold text-muted">Armada Pengantar</label>
+                                <select name="fleet_id" id="fleet_id" class="form-select select-sm">
+                                    <option value="">-- Pilih Armada (Opsional) --</option>
+                                    @foreach($fleets as $fleet)
+                                        <option value="{{ $fleet->id }}" {{ $package->fleet_id == $fleet->id ? 'selected' : '' }}>
+                                            {{ $fleet->plate_number }} ({{ ucfirst($fleet->type) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Catatan / Notes -->
+                            <div class="mb-3">
+                                <label for="notes" class="form-label small fw-bold text-muted">Catatan / Keterangan</label>
+                                <textarea name="notes" id="notes" class="form-control form-control-sm" rows="2" placeholder="Masukkan catatan opsional (misal: paket diterima oleh ybs)..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 btn-sm">
+                                <i class="bi bi-save"></i> Perbarui Status
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+
             <!-- Info Tambahan -->
             <div class="card border-0 shadow-sm mt-3">
                 <div class="card-header bg-light border-0 py-3">

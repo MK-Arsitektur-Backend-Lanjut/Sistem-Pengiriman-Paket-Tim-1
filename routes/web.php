@@ -50,6 +50,7 @@ Route::prefix('tracking')->group(function () {
     Route::post('/search', [TrackingWebController::class, 'doSearch'])->name('tracking.doSearch');
     Route::get('/{tracking_number}', [TrackingWebController::class, 'show'])->name('tracking.show');
     Route::get('/{tracking_number}/timeline', [TrackingWebController::class, 'timeline'])->name('tracking.timeline');
+    Route::post('/{tracking_number}/status', [TrackingWebController::class, 'updateStatus'])->name('tracking.updateStatus');
 });
 
 // API untuk autocomplete search

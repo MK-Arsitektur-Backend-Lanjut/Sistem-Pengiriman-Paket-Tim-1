@@ -23,6 +23,8 @@ class Package extends Model
         'height',
         'volume',
         'warehouse_id',
+        'hub_id',
+        'fleet_id',
         'package_status'
     ];
 
@@ -33,6 +35,8 @@ class Package extends Model
         'height'       => 'float',
         'volume'       => 'float',
         'warehouse_id' => 'integer',
+        'hub_id'       => 'integer',
+        'fleet_id'     => 'integer',
     ];
 
     // ── Relationships ──────────────────────────────────────────────────
@@ -42,20 +46,24 @@ class Package extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
-    /**
-     * M2 Integration: Semua log perjalanan paket (kronologis)
-     */
-    public function shipmentLogs()
+    public function hub()
     {
-        return $this->hasMany(ShipmentLog::class)->orderBy('recorded_at');
+        return $this->belongsTo(Hub::class);
     }
 
-    /**
-     * M2 Integration: Log terbaru (status terakhir paket)
-     */
+    public function fleet()
+    {
+        return $this->belongsTo(Fleet::class);
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(PackageHistory::class, 'package_id')->orderBy('recorded_at');
+    }
+
     public function latestLog()
     {
-        return $this->hasOne(ShipmentLog::class)->latestOfMany('recorded_at');
+        return $this->hasOne(PackageHistory::class, 'package_id')->latestOfMany('recorded_at');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────
@@ -71,5 +79,20 @@ class Package extends Model
         }
 
         return 'large';
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->package_status) {
+            'registered'       => 'Paket Terdaftar',
+            'picked_up'        => 'Dijemput Armada',
+            'in_transit'       => 'Dalam Perjalanan',
+            'arrived_at_hub'   => 'Tiba di Hub Transit',
+            'out_for_delivery' => 'Sedang Diantar',
+            'delivered'        => 'Terkirim',
+            'failed'           => 'Gagal Kirim',
+            'returned'         => 'Dikembalikan',
+            default            => ucfirst($this->package_status),
+        };
     }
 }

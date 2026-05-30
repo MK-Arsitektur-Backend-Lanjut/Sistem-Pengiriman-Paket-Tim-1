@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Hub;
 use App\Models\Package;
-use App\Models\ShipmentLog;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,11 +74,11 @@ class CreateShipmentFromPackageTest extends TestCase
             ]
         ]);
 
-        // 7. Assert shipment log is created
-        $this->assertDatabaseHas('shipment_logs', [
-            'package_id' => $package->id,
-            'status'     => 'registered',
-            'hub_id'     => $originHub->id,
+        // 7. Assert package has correct transit fields
+        $this->assertDatabaseHas('packages', [
+            'id'             => $package->id,
+            'package_status' => 'registered',
+            'hub_id'         => $originHub->id,
         ]);
 
         // 8. Assert package status is updated to registered (or whatever it already was/is synced)

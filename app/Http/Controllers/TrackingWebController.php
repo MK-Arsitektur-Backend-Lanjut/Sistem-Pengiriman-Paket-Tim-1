@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\Contracts\ShipmentLogRepositoryInterface;
+use App\Repositories\Contracts\PackageRepositoryInterface;
 use App\Services\CacheService;
+use App\Models\Hub;
+use App\Models\Fleet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TrackingWebController extends Controller
 {
-    protected ShipmentLogRepositoryInterface $logRepo;
+    protected PackageRepositoryInterface $packageRepo;
 
-    public function __construct(ShipmentLogRepositoryInterface $logRepo)
+    public function __construct(PackageRepositoryInterface $packageRepo)
     {
-        $this->logRepo = $logRepo;
+        $this->packageRepo = $packageRepo;
     }
 
     /**
@@ -25,9 +27,12 @@ class TrackingWebController extends Controller
         $search = $request->query('search');
 
         try {
-            $packages = $this->logRepo->getAllPackages($search, $status);
+            $packages = $this->packageRepo->getAllPackagesPaginated([
+                'search' => $search,
+                'status' => $status
+            ], 15);
 
-            // Statistik dari packages.package_status (bukan shipments)
+            // Statistik dari packages.package_status
             $stats = CacheService::remember(
                 CacheService::keyDashboardStats(),
                 function () {
@@ -46,7 +51,7 @@ class TrackingWebController extends Controller
                     ];
                 },
                 CacheService::TTL_SHORT,
-                [CacheService::TAG_STATS, CacheService::TAG_SHIPMENT]
+                [CacheService::TAG_STATS, CacheService::TAG_PACKAGE]
             );
 
             return view('tracking.index', compact('packages', 'stats', 'status', 'search'));
@@ -61,11 +66,14 @@ class TrackingWebController extends Controller
     public function show(string $trackingNumber)
     {
         try {
-            $package   = $this->logRepo->findPackageByTrackingNumber($trackingNumber);
-            $logs      = $this->logRepo->getLogsByPackage($package->id);
-            $latestLog = $logs->last();
+            $package   = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+            $logs      = $package->histories()->orderByDesc('recorded_at')->get();
+            $latestLog = $package->latestLog;
 
-            return view('tracking.show', compact('package', 'logs', 'latestLog'));
+            $hubs = Hub::orderBy('name')->get();
+            $fleets = Fleet::orderBy('plate_number')->get();
+
+            return view('tracking.show', compact('package', 'logs', 'latestLog', 'hubs', 'fleets'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return back()->with('error', 'Paket tidak ditemukan');
         }
@@ -77,8 +85,8 @@ class TrackingWebController extends Controller
     public function timeline(string $trackingNumber)
     {
         try {
-            $package = $this->logRepo->findPackageByTrackingNumber($trackingNumber);
-            $logs    = $this->logRepo->getLogsByPackage($package->id);
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+            $logs    = $package->histories;
 
             return view('tracking.timeline', compact('package', 'logs'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
@@ -106,7 +114,7 @@ class TrackingWebController extends Controller
         }
 
         try {
-            $results = $this->logRepo->searchByTracking($keyword);
+            $results = $this->packageRepo->getAllPackagesPaginated(['search' => $keyword], 15);
             return view('tracking.search-results', compact('results', 'keyword'));
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal melakukan pencarian');
@@ -130,9 +138,9 @@ class TrackingWebController extends Controller
             ->orWhere('receiver_name', 'like', "%$q%")
             ->orWhere('origin', 'like', "%$q%")
             ->orWhere('destination', 'like', "%$q%")
-            ->with('latestLog')
+            ->with(['warehouse', 'hub', 'fleet'])
             ->limit(10)
-            ->select('id', 'tracking_number', 'sender_name', 'receiver_name', 'package_status')
+            ->select('id', 'tracking_number', 'sender_name', 'receiver_name', 'package_status', 'hub_id', 'fleet_id')
             ->get();
 
         return response()->json($results->map(fn ($package) => [
@@ -142,5 +150,39 @@ class TrackingWebController extends Controller
             'receiver_name'   => $package->receiver_name,
             'status'          => $package->package_status,
         ]));
+    }
+
+    /**
+     * Update status/lokasi paket dari web form
+     */
+    public function updateStatus(Request $request, string $trackingNumber)
+    {
+        $validated = $request->validate([
+            'status'      => 'required|in:registered,picked_up,in_transit,arrived_at_hub,out_for_delivery,delivered,failed,returned',
+            'hub_id'      => 'nullable|exists:hubs,id',
+            'fleet_id'    => 'nullable|exists:fleets,id',
+            'notes'       => 'nullable|string',
+            'recorded_at' => 'nullable|date',
+        ]);
+
+        try {
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+
+            if (in_array($package->package_status, ['delivered', 'failed', 'returned'])) {
+                return back()->with('error', 'Paket sudah dalam status final, tidak bisa diperbarui lagi.');
+            }
+
+            $this->packageRepo->updatePackageStatus($trackingNumber, $validated);
+
+            if ($validated['status'] === 'arrived_at_hub' && !empty($validated['hub_id'])) {
+                Hub::where('id', $validated['hub_id'])->increment('current_load');
+            }
+
+            return back()->with('success', 'Status/lokasi paket berhasil diperbarui!');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return back()->with('error', 'Paket tidak ditemukan');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memperbarui status: ' . $e->getMessage());
+        }
     }
 }

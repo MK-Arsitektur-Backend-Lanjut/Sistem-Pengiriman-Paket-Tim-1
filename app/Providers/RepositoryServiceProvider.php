@@ -16,10 +16,6 @@ use App\Repositories\Eloquent\WarehouseRepository;
 use App\Repositories\Contracts\PackageRepositoryInterface;
 use App\Repositories\Eloquent\PackageRepository;
 
-// Module 2: Tracking System (ShipmentLog)
-use App\Repositories\Contracts\ShipmentLogRepositoryInterface;
-use App\Repositories\Eloquent\ShipmentLogRepository;
-
 class RepositoryServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -31,9 +27,6 @@ class RepositoryServiceProvider extends ServiceProvider
         // Module 1: Warehouse & Package Repository Bindings
         $this->app->bind(WarehouseRepositoryInterface::class, WarehouseRepository::class);
         $this->app->bind(PackageRepositoryInterface::class, PackageRepository::class);
-
-        // Module 2: Tracking System (ShipmentLog) Repository Binding
-        $this->app->bind(ShipmentLogRepositoryInterface::class, ShipmentLogRepository::class);
     }
 
     public function boot(): void

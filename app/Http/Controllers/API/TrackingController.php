@@ -4,18 +4,18 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hub;
-use App\Models\ShipmentLog;
-use App\Repositories\Contracts\ShipmentLogRepositoryInterface;
+use App\Models\Package;
+use App\Repositories\Contracts\PackageRepositoryInterface;
 use App\Services\CacheService;
 use Illuminate\Http\Request;
 
 class TrackingController extends Controller
 {
-    protected ShipmentLogRepositoryInterface $logRepo;
+    protected PackageRepositoryInterface $packageRepo;
 
-    public function __construct(ShipmentLogRepositoryInterface $logRepo)
+    public function __construct(PackageRepositoryInterface $packageRepo)
     {
-        $this->logRepo = $logRepo;
+        $this->packageRepo = $packageRepo;
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ class TrackingController extends Controller
     // ══════════════════════════════════════════════════════════════════
 
     /**
-     * Daftar semua paket (dengan log terbaru)
+     * Daftar semua paket
      * GET /api/v1/tracking
      */
     public function index(Request $request)
@@ -32,7 +32,10 @@ class TrackingController extends Controller
         $status = $request->query('status');
 
         try {
-            $packages = $this->logRepo->getAllPackages($search, $status);
+            $packages = $this->packageRepo->getAllPackagesPaginated([
+                'search' => $search,
+                'status' => $status
+            ], 15);
 
             return response()->json([
                 'status' => 'success',
@@ -48,13 +51,13 @@ class TrackingController extends Controller
     }
 
     /**
-     * Detail paket + seluruh riwayat log
+     * Detail paket
      * GET /api/v1/tracking/{tracking_number}
      */
     public function show(string $trackingNumber)
     {
         try {
-            $package = $this->logRepo->findPackageByTrackingNumber($trackingNumber);
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
 
             return response()->json([
                 'status' => 'success',
@@ -69,14 +72,28 @@ class TrackingController extends Controller
     }
 
     /**
-     * Riwayat status kronologis paket
+     * Riwayat status paket dari package_histories
      * GET /api/v1/tracking/{tracking_number}/history
      */
     public function showHistory(string $trackingNumber)
     {
         try {
-            $package = $this->logRepo->findPackageByTrackingNumber($trackingNumber);
-            $logs    = $this->logRepo->getLogsByPackage($package->id);
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+
+            $history = $package->histories->map(function ($h) {
+                return [
+                    'id'            => $h->id,
+                    'package_id'    => $h->package_id,
+                    'status'        => $h->status,
+                    'status_label'  => $h->status_label,
+                    'hub_id'        => $h->hub_id,
+                    'hub'           => $h->hub,
+                    'fleet_id'      => $h->fleet_id,
+                    'fleet'         => $h->fleet,
+                    'notes'         => $h->notes,
+                    'recorded_at'   => $h->recorded_at,
+                ];
+            });
 
             return response()->json([
                 'status'          => 'success',
@@ -86,7 +103,7 @@ class TrackingController extends Controller
                     'id', 'tracking_number', 'sender_name', 'receiver_name',
                     'origin', 'destination', 'weight', 'package_status',
                 ]),
-                'history'         => $logs,
+                'history'         => $history,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return response()->json([
@@ -112,7 +129,7 @@ class TrackingController extends Controller
         }
 
         try {
-            $results = $this->logRepo->searchByTracking($keyword);
+            $results = $this->packageRepo->getAllPackagesPaginated(['search' => $keyword], 15);
 
             return response()->json([
                 'status'  => 'success',
@@ -170,54 +187,46 @@ class TrackingController extends Controller
     // ══════════════════════════════════════════════════════════════════
 
     /**
-     * Update lokasi / status paket (INSERT log baru)
+     * Update lokasi / status paket dan mencatat riwayat
      * PATCH /api/v1/tracking/{tracking_number}/status
-     *
-     * Setiap pemanggilan = 1 baris baru di shipment_logs (append, bukan update)
-     * M4 Integration: hub_id + fleet_id opsional
      */
     public function updateStatus(Request $request, string $trackingNumber)
     {
         $validated = $request->validate([
-            'status'        => 'required|in:registered,picked_up,in_transit,arrived_at_hub,out_for_delivery,delivered,failed,returned',
-            'hub_id'        => 'nullable|exists:hubs,id',
-            'fleet_id'      => 'nullable|exists:fleets,id',
-            'location_note' => 'nullable|string|max:255',
-            'notes'         => 'nullable|string',
-            'recorded_at'   => 'nullable|date',
+            'status'      => 'required|in:registered,picked_up,in_transit,arrived_at_hub,out_for_delivery,delivered,failed,returned',
+            'hub_id'      => 'nullable|exists:hubs,id',
+            'fleet_id'    => 'nullable|exists:fleets,id',
+            'notes'       => 'nullable|string',
+            'recorded_at' => 'nullable|date',
         ]);
 
         try {
-            $package = $this->logRepo->findPackageByTrackingNumber($trackingNumber);
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
 
             // Cegah update setelah status final
-            $latestLog = $this->logRepo->getLatestLog($package->id);
-            if ($latestLog && in_array($latestLog->status, ShipmentLog::FINAL_STATUSES)) {
+            if (in_array($package->package_status, ['delivered', 'failed', 'returned'])) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Paket sudah dalam status final: ' . $latestLog->status . '. Tidak bisa diupdate.',
+                    'message' => 'Paket sudah dalam status final: ' . $package->package_status . '. Tidak bisa diupdate.',
                 ], 422);
             }
 
-            $log = $this->logRepo->recordLog($package->id, $validated);
+            // Update status dan relasi transit langsung pada model package
+            $updatedPackage = $this->packageRepo->updatePackageStatus($trackingNumber, $validated);
 
             // Jika tiba di hub: update hub.current_load (M4 integration)
             if ($validated['status'] === 'arrived_at_hub' && !empty($validated['hub_id'])) {
                 Hub::where('id', $validated['hub_id'])->increment('current_load');
             }
 
-            // Invalidasi cache
-            CacheService::forget(CacheService::keyShipmentByTracking($trackingNumber));
-            CacheService::flushTag(CacheService::TAG_SHIPMENT, CacheService::TAG_TRACKING);
-
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Status paket berhasil diperbarui!',
                 'data'    => [
-                    'package_id'     => $package->id,
-                    'tracking_number' => $package->tracking_number,
-                    'current_status' => $validated['status'],
-                    'log'            => $log->load(['hub', 'fleet']),
+                    'package_id'      => $updatedPackage->id,
+                    'tracking_number' => $updatedPackage->tracking_number,
+                    'current_status'  => $updatedPackage->package_status,
+                    'package'         => $updatedPackage,
                 ],
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
@@ -240,7 +249,7 @@ class TrackingController extends Controller
     }
 
     /**
-     * Daftar semua log paket milik customer yang login
+     * Daftar paket milik customer yang login
      * GET /api/v1/customer/shipments
      * M3 Integration
      */
@@ -252,10 +261,8 @@ class TrackingController extends Controller
         }
 
         try {
-            // Customer melihat paket yang dikirim ke/dari warehouse mereka
-            // Sementara ini tampilkan semua paket (bisa difilter jika ada customer_id di packages)
             $status = $request->query('status');
-            $packages = $this->logRepo->getAllPackages(null, $status);
+            $packages = $this->packageRepo->getAllPackagesPaginated(['status' => $status], 15);
 
             return response()->json([
                 'status' => 'success',
@@ -282,7 +289,7 @@ class TrackingController extends Controller
         }
 
         try {
-            $package = $this->logRepo->findPackageByTrackingNumber($trackingNumber);
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
 
             return response()->json([
                 'status' => 'success',
@@ -297,7 +304,7 @@ class TrackingController extends Controller
     }
 
     /**
-     * Create shipment log from package (M1 + M3 Integration)
+     * Create shipment dari package (M1 + M3 Integration)
      * POST /api/v1/shipment/from-package/{package_id}
      */
     public function createFromPackage(Request $request, $packageId)
@@ -317,7 +324,7 @@ class TrackingController extends Controller
                 'destination_hub_id' => 'required|exists:hubs,id',
             ]);
 
-            // Get origin hub from warehouse
+            // Get origin hub dari warehouse
             $originHubId = $package->warehouse?->hub_id;
             if (!$originHubId) {
                 return response()->json([
@@ -330,7 +337,7 @@ class TrackingController extends Controller
             $originHub = Hub::find($originHubId);
             $destinationHub = Hub::find($validated['destination_hub_id']);
 
-            // Validate destination is different from origin
+            // Validasi tujuan berbeda dengan asal
             if ($originHubId == $validated['destination_hub_id']) {
                 return response()->json([
                     'status'  => 'error',
@@ -344,21 +351,20 @@ class TrackingController extends Controller
                 ], 422);
             }
 
-            // Create initial shipment log (status: registered)
-            $log = $this->logRepo->recordLog($package->id, [
-                'status'        => 'registered',
-                'hub_id'        => $originHubId,
-                'location_note' => 'Gudang asal',
-                'notes'         => 'Paket dari gudang telah terdaftar untuk pengiriman ke hub ' . $destinationHub->name,
-                'recorded_by'   => $customer->id,
+            // Inisialisasi pengiriman: ubah status paket ke registered dan posisikan di origin hub
+            $updatedPackage = $this->packageRepo->updatePackageStatus($package->tracking_number, [
+                'status'   => 'registered',
+                'hub_id'   => $originHubId,
+                'fleet_id' => null,
+                'notes'    => 'Pengiriman berhasil dibuat dari paket!'
             ]);
 
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Pengiriman berhasil dibuat dari paket!',
                 'data'    => [
-                    'tracking_number' => $package->tracking_number,
-                    'log'             => $log->load(['hub', 'fleet']),
+                    'tracking_number' => $updatedPackage->tracking_number,
+                    'package'         => $updatedPackage,
                 ],
             ], 201);
 

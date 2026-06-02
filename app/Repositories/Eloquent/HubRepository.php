@@ -5,10 +5,16 @@ namespace App\Repositories\Eloquent;
 use App\Models\Hub;
 use App\Models\Warehouse;
 use App\Repositories\Contracts\HubRepositoryInterface;
+use App\Services\CacheService;
 
 class HubRepository implements HubRepositoryInterface
 {
     public function getAllHubs($search = null)
+    {
+        return $this->fetchHubs($search);
+    }
+
+    private function fetchHubs(?string $search)
     {
         $query = Hub::query();
         if ($search) {

@@ -35,7 +35,7 @@ class CustomerAuthController extends Controller
         $user = User::create([
             'name'        => $payload['name'],
             'email'       => $payload['email'],
-            'password'    => $payload['password'],
+            'password'    => Hash::make($payload['password']),
             'phone'       => $payload['phone'] ?? null,
             'address'     => $payload['address'] ?? null,
             'is_customer' => true,
@@ -96,11 +96,11 @@ class CustomerAuthController extends Controller
 
         // Fetch user dari DB — lebih reliable dibanding auth('api')->user()
         // yang kadang null setelah attempt() dalam request yang sama.
-        $user = User::where('email', $payload['email'])->first();
+        $user = User::where('email', $payload['email'])->where('is_customer', true)->first();
 
         if (!$user) {
             return response()->json([
-                'message' => 'User tidak ditemukan.',
+                'message' => 'User tidak ditemukan atau bukan pelanggan.',
             ], 404);
         }
 

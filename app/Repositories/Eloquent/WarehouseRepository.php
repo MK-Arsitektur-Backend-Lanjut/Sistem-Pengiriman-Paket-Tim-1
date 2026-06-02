@@ -94,4 +94,14 @@ class WarehouseRepository implements WarehouseRepositoryInterface
 
         return round(($warehouse->current_load / $warehouse->capacity) * 100, 2);
     }
+
+    public function getWarehouseCount()
+    {
+        return Warehouse::count();
+    }
+
+    public function getLimitWarehouses($limit)
+    {
+        return Warehouse::limit($limit)->get();
+    }
 }

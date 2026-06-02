@@ -11,5 +11,7 @@ interface WarehouseRepositoryInterface
     public function deleteWarehouse($id);
     public function hasPackages($id);
     public function getStatistics();
+    public function getWarehouseCount();
+    public function getLimitWarehouses($limit);
     public function calculateUsagePercentage($id);
 }

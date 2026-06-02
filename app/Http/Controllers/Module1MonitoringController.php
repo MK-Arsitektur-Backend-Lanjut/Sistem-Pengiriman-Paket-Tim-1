@@ -139,7 +139,7 @@ class Module1MonitoringController extends Controller
 
     private function buildWarehouseStats(): array
     {
-        $warehouses = Warehouse::with(['packages', 'hub'])->get();
+        $warehouses = Warehouse::with(['hub'])->withCount('packages')->get();
 
         $totalCapacity    = $warehouses->sum('capacity');
         $totalCurrentLoad = $warehouses->sum('current_load');
@@ -159,7 +159,7 @@ class Module1MonitoringController extends Controller
                 'current_load'     => $warehouse->current_load,
                 'usage_percentage' => $usagePercentage,
                 'status'           => $warehouse->status,
-                'package_count'    => $warehouse->packages->count(),
+                'package_count'    => $warehouse->packages_count,
                 'created_at'       => $warehouse->created_at->format('Y-m-d H:i:s'),
             ];
         });

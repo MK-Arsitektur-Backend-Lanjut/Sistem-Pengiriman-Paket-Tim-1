@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Repositories\Contracts\FleetRepositoryInterface;
 use App\Repositories\Contracts\HubRepositoryInterface;
 use App\Http\Controllers\Module1MonitoringController;
+use App\Http\Controllers\WarehouseWebController;
+use App\Http\Controllers\FleetWebController;
 use App\Http\Controllers\TrackingWebController;
 
 // ── Module 3: Autentikasi JWT (Dedicated Login & Register Pages) ──
@@ -22,18 +24,7 @@ Route::get('/home', function () {
 });
 
 // Dashboard Modul 4 (Fleet & Hub)
-Route::get('/fleet', function (\Illuminate\Http\Request $request, HubRepositoryInterface $hubRepo, FleetRepositoryInterface $fleetRepo) {
-    if(!\Illuminate\Support\Facades\Schema::hasTable('hubs')) {
-        return "Database sedang disiapkan, ini wajar saat instalasi. Harap refresh halaman.";
-    }
-    
-    $hubs = $hubRepo->getAllHubs($request->search_hub);
-    $allHubs = \App\Models\Hub::orderBy('name')->get();
-    $fleets = $fleetRepo->getAllFleets($request->search_fleet); // returns pagination
-    $warehouses = \App\Models\Warehouse::all();
-    
-    return view('Fleet&Hub.index', compact('hubs', 'allHubs', 'fleets', 'warehouses'));
-});
+Route::get('/fleet', [FleetWebController::class, 'index'])->name('fleet.index');
 
 // Module 1: Warehouse & Package Monitoring
 Route::get('/module-1-monitor', [Module1MonitoringController::class, 'index'])->name('module1.monitoring');

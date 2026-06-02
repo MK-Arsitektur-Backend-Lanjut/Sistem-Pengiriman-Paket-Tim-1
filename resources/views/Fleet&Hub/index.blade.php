@@ -25,7 +25,7 @@
             'icon_class' => 'kpi-icon-hub',
             'pill_class' => 'pill-hub',
             'label' => 'Hub Aktif',
-            'value' => $warehouses->count(),
+            'value' => $warehousesCount,
             'caption' => 'lokasi terdeteksi',
         ],
         [

@@ -17,11 +17,14 @@ class PackageRepository implements PackageRepositoryInterface
         }
 
         if (isset($filters['category'])) {
-            $packages = $query->get();
-            $packages = $packages->filter(function ($package) use ($filters) {
-                return $package->getDimensionCategory() === $filters['category'];
-            });
-            return $packages;
+            $category = $filters['category'];
+            if ($category === 'small') {
+                $query->where('volume', '<=', 1000);
+            } elseif ($category === 'medium') {
+                $query->where('volume', '>', 1000)->where('volume', '<=', 5000);
+            } elseif ($category === 'large') {
+                $query->where('volume', '>', 5000);
+            }
         }
 
         if (isset($filters['status'])) {
@@ -149,31 +152,34 @@ class PackageRepository implements PackageRepositoryInterface
 
     public function getStatistics()
     {
-        $packages = Package::with('warehouse')->get();
+        $stats = Package::query()
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN volume <= 1000 THEN 1 ELSE 0 END) as small,
+                SUM(CASE WHEN volume > 1000 AND volume <= 5000 THEN 1 ELSE 0 END) as medium,
+                SUM(CASE WHEN volume > 5000 THEN 1 ELSE 0 END) as large
+            ")
+            ->first();
 
-        $totalPackages = $packages->count();
-        $smallPackages = $packages->filter(function ($p) {
-            return $p->getDimensionCategory() === 'small';
-        })->count();
-        $mediumPackages = $packages->filter(function ($p) {
-            return $p->getDimensionCategory() === 'medium';
-        })->count();
-        $largePackages = $packages->filter(function ($p) {
-            return $p->getDimensionCategory() === 'large';
-        })->count();
+        $byWarehouse = Package::query()
+            ->leftJoin('warehouses', 'packages.warehouse_id', '=', 'warehouses.id')
+            ->selectRaw('packages.warehouse_id, warehouses.warehouse_name, COUNT(*) as count')
+            ->groupBy('packages.warehouse_id', 'warehouses.warehouse_name')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'warehouse_id' => $row->warehouse_id !== null ? (int) $row->warehouse_id : null,
+                    'warehouse_name' => $row->warehouse_name ?? 'N/A',
+                    'count' => (int) $row->count,
+                ];
+            });
 
         return [
-            'total_packages' => $totalPackages,
-            'small_packages' => $smallPackages,
-            'medium_packages' => $mediumPackages,
-            'large_packages' => $largePackages,
-            'by_warehouse' => $packages->groupBy('warehouse_id')->map(function ($group) {
-                return [
-                    'warehouse_id' => $group->first()->warehouse_id,
-                    'warehouse_name' => $group->first()->warehouse->warehouse_name ?? 'N/A',
-                    'count' => $group->count(),
-                ];
-            })->values(),
+            'total_packages' => (int) ($stats->total ?? 0),
+            'small_packages' => (int) ($stats->small ?? 0),
+            'medium_packages' => (int) ($stats->medium ?? 0),
+            'large_packages' => (int) ($stats->large ?? 0),
+            'by_warehouse' => $byWarehouse,
         ];
     }
 
@@ -203,18 +209,10 @@ class PackageRepository implements PackageRepositoryInterface
 
     public function getPackagesByCategory()
     {
-        $packages = Package::with('warehouse')->get();
-
         return [
-            'small' => $packages->filter(function ($p) {
-                return $p->getDimensionCategory() === 'small';
-            })->values(),
-            'medium' => $packages->filter(function ($p) {
-                return $p->getDimensionCategory() === 'medium';
-            })->values(),
-            'large' => $packages->filter(function ($p) {
-                return $p->getDimensionCategory() === 'large';
-            })->values(),
+            'small' => Package::with('warehouse')->where('volume', '<=', 1000)->get(),
+            'medium' => Package::with('warehouse')->where('volume', '>', 1000)->where('volume', '<=', 5000)->get(),
+            'large' => Package::with('warehouse')->where('volume', '>', 5000)->get(),
         ];
     }
 

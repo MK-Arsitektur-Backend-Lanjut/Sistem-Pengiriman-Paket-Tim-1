@@ -166,7 +166,7 @@ class Module1MonitoringController extends Controller
 
         return [
             'total_warehouses'       => $warehouses->count(),
-            'active_warehouses'      => $warehouses->where('status', 'active')->count(),
+            'active_warehouses'      => $warehouses->where('status', 'available')->count(),
             'total_capacity'         => $totalCapacity,
             'total_current_load'     => $totalCurrentLoad,
             'overall_usage_percentage' => $totalCapacity > 0

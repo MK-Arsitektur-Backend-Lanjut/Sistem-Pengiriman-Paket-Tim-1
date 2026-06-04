@@ -34,170 +34,57 @@
         <section class="card-soft p-4 p-lg-5">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
                 <div>
-                    <h3 class="h4 fw-bold mb-1">Module 3 API Playground</h3>
-                    <p class="text-secondary mb-0">Kelola autentikasi pelanggan, profil pengiriman, dan kalkulator ongkir langsung dari halaman ini.</p>
+                    <h3 class="h4 fw-bold mb-1">Dynamic Shipping Calculator</h3>
+                    <p class="text-secondary mb-0">Hitung biaya pengiriman secara dinamis berdasarkan berat, jarak, dan tipe layanan.</p>
                 </div>
-                <div class="d-flex gap-2">
-                    <span id="tokenBadge" class="badge text-bg-secondary">Token: Belum login</span>
-                    <button id="btnLogout" type="button" class="btn btn-outline-danger btn-sm">Logout</button>
+                <div class="d-flex gap-2 align-items-center">
+                    <span id="navUserName" class="text-secondary fw-semibold" style="font-size:0.9rem;"></span>
+                    <a href="{{ url('/auth/profile') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                        <i class="bi bi-person-gear"></i> Manage Profile
+                    </a>
                 </div>
             </div>
 
             <div id="globalAlert"></div>
 
             <div class="row g-4">
-                <div class="col-12 col-lg-6">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <h4 class="h5 fw-bold">Customer Authentication</h4>
-                            <p class="text-secondary small">Gunakan register/login untuk mendapatkan bearer token.</p>
-
-                            <ul class="nav nav-pills mb-3" id="auth-tab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="register-tab" data-bs-toggle="pill" data-bs-target="#register-pane" type="button" role="tab">Register</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="login-tab" data-bs-toggle="pill" data-bs-target="#login-pane" type="button" role="tab">Login</button>
-                                </li>
-                            </ul>
-
-                            <div class="tab-content" id="auth-tab-content">
-                                <div class="tab-pane fade show active" id="register-pane" role="tabpanel">
-                                    <form id="registerForm" class="row g-2">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Name</label>
-                                            <input name="name" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Email</label>
-                                            <input name="email" type="email" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Phone</label>
-                                            <input name="phone" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Device Name</label>
-                                            <input name="device_name" class="form-control form-control-sm" value="web-client">
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">Address</label>
-                                            <input name="address" class="form-control form-control-sm">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Password</label>
-                                            <input name="password" type="password" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Confirm Password</label>
-                                            <input name="password_confirmation" type="password" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-12 d-grid">
-                                            <button type="submit" class="btn btn-brand text-white">Register & Get Token</button>
-                                        </div>
-                                    </form>
-                                </div>
-
-                                <div class="tab-pane fade" id="login-pane" role="tabpanel">
-                                    <form id="loginForm" class="row g-2">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Email</label>
-                                            <input name="email" type="email" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Password</label>
-                                            <input name="password" type="password" class="form-control form-control-sm" required>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">Device Name</label>
-                                            <input name="device_name" class="form-control form-control-sm" value="web-client">
-                                        </div>
-                                        <div class="col-12 d-grid">
-                                            <button type="submit" class="btn btn-brand text-white">Login</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-
-                            <div class="mt-3">
-                                <label class="form-label small text-secondary">Current Token</label>
-                                <textarea id="tokenPreview" class="form-control form-control-sm" rows="3" readonly></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-lg-6">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h4 class="h5 fw-bold mb-0">Customer Shipping Profile</h4>
-                                <button id="btnLoadProfile" type="button" class="btn btn-outline-primary btn-sm">Load Profile</button>
-                            </div>
-                            <p class="text-secondary small">Endpoint: GET/PUT customer shipping profile (per user login).</p>
-
-                            <form id="profileForm" class="row g-2">
-                                <div class="col-md-6">
-                                    <label class="form-label">Sender Name</label>
-                                    <input name="sender_name" class="form-control form-control-sm" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Sender Phone</label>
-                                    <input name="sender_phone" class="form-control form-control-sm" required>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Default Pickup Address</label>
-                                    <input name="default_pickup_address" class="form-control form-control-sm" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Origin City</label>
-                                    <input name="default_origin_city" class="form-control form-control-sm" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Postal Code</label>
-                                    <input name="default_origin_postal_code" class="form-control form-control-sm" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Preferred Service</label>
-                                    <select name="preferred_service_type" class="form-select form-select-sm" required>
-                                        <option value="regular">Regular</option>
-                                        <option value="express">Express</option>
-                                        <option value="same_day">Same Day</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Package Type</label>
-                                    <input name="preferred_package_type" class="form-control form-control-sm" placeholder="box / envelope / pallet">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Notes</label>
-                                    <textarea name="notes" class="form-control form-control-sm" rows="2"></textarea>
-                                </div>
-                                <div class="col-12 d-grid">
-                                    <button type="submit" class="btn btn-success">Save Profile</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <h4 class="h5 fw-bold">Dynamic Shipping Calculator</h4>
-                            <p class="text-secondary small">Endpoint: POST shipping-cost/calculate dengan perhitungan dinamis berdasarkan rules database.</p>
-
-                            <form id="calculatorForm" class="row g-2 align-items-end">
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label">Weight (kg)</label>
-                                    <input name="weight_kg" type="number" step="0.1" min="0.1" class="form-control form-control-sm" required>
+                        <div class="card-body p-lg-4">
+                            <form id="calculatorForm" class="row g-3 align-items-end">
+                                <div class="col-12 mb-2">
+                                    <label class="form-label fw-semibold d-block">Calculation Mode</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="calc_mode" id="modeManual" value="manual" checked onchange="toggleCalcMode('manual')">
+                                        <label class="form-check-label" for="modeManual">Manual Input</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="calc_mode" id="modePackage" value="package" onchange="toggleCalcMode('package')">
+                                        <label class="form-check-label" for="modePackage">Select Registered Package</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6" id="packageSelectContainer" style="display: none;">
+                                    <label class="form-label fw-semibold">Select Package</label>
+                                    <select id="packageSelect" name="package_id" class="form-select form-select-sm">
+                                        <option value="">-- Choose Package --</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3" id="weightContainer">
+                                    <label class="form-label fw-semibold">Weight (kg)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input id="calcWeightInput" name="weight_kg" type="number" step="0.1" min="0.1" class="form-control" required>
+                                        <span class="input-group-text">kg</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-3" id="distanceContainer">
+                                    <label class="form-label fw-semibold">Distance (km)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input id="calcDistanceInput" name="distance_km" type="number" step="0.1" min="1" class="form-control" required>
+                                        <span class="input-group-text">km</span>
+                                    </div>
                                 </div>
                                 <div class="col-12 col-md-3">
-                                    <label class="form-label">Distance (km)</label>
-                                    <input name="distance_km" type="number" step="0.1" min="1" class="form-control form-control-sm" required>
-                                </div>
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label">Service Type</label>
+                                    <label class="form-label fw-semibold">Service Type</label>
                                     <select name="service_type" class="form-select form-select-sm" required>
                                         <option value="regular">Regular</option>
                                         <option value="express">Express</option>
@@ -205,60 +92,84 @@
                                     </select>
                                 </div>
                                 <div class="col-12 col-md-3">
-                                    <label class="form-label">Declared Value (IDR)</label>
-                                    <input name="declared_value" type="number" min="0" step="1000" class="form-control form-control-sm" value="0">
+                                    <label class="form-label fw-semibold">Declared Value</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Rp</span>
+                                        <input name="declared_value" type="number" min="0" step="1000" class="form-control" value="0">
+                                    </div>
                                 </div>
-                                <div class="col-12 col-md-3">
-                                    <div class="form-check mt-2">
+                                <div class="col-12 col-md-2">
+                                    <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="isFragile" name="is_fragile">
-                                        <label class="form-check-label" for="isFragile">Fragile Package</label>
+                                        <label class="form-check-label small" for="isFragile">Fragile Package</label>
                                     </div>
                                 </div>
-                                <div class="col-12 col-md-3">
-                                    <div class="form-check mt-2">
+                                <div class="col-12 col-md-2">
+                                    <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="useInsurance" name="use_insurance">
-                                        <label class="form-check-label" for="useInsurance">Use Insurance</label>
+                                        <label class="form-check-label small" for="useInsurance">Use Insurance</label>
                                     </div>
                                 </div>
-                                <div class="col-12 col-md-6 d-grid">
-                                    <button type="submit" class="btn btn-primary">Calculate Shipping Cost</button>
+                                <div class="col-12 col-md-8 d-grid">
+                                    <button type="submit" class="btn btn-primary fw-bold">
+                                        <i class="bi bi-calculator me-2"></i>Calculate Shipping Cost
+                                    </button>
                                 </div>
                             </form>
 
-                            <div class="table-responsive mt-3">
-                                <table class="table table-sm">
+                            <div id="packageDetailsContainer" class="card bg-light border-0 p-3 mt-4" style="display: none; border-radius: 12px;">
+                                <h6 class="fw-bold mb-2 text-primary"><i class="bi bi-box-seam me-1"></i> Package Details</h6>
+                                <div class="row g-2 small">
+                                    <div class="col-12 col-md-4"><strong>Tracking #:</strong> <span id="detailTracking" class="text-primary fw-bold">-</span></div>
+                                    <div class="col-12 col-md-8"><strong>Route:</strong> <span id="detailRoute">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Dimensions:</strong> <span id="detailDimensions">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Actual Weight:</strong> <span id="detailActualWeight">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Volumetric Weight:</strong> <span id="detailVolumetricWeight">-</span></div>
+                                    <div class="col-12 col-md-4"><strong>Effective Weight:</strong> <span id="detailEffectiveWeight" class="fw-bold text-success">-</span></div>
+                                    <div class="col-12 col-md-8"><strong>Calculated Distance:</strong> <span id="detailDistance" class="fw-bold text-success">-</span></div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mt-4">
+                                <table class="table table-hover align-middle shadow-sm rounded-3 overflow-hidden">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Component</th>
+                                            <th class="text-end">Cost</th>
+                                        </tr>
+                                    </thead>
                                     <tbody>
                                         <tr>
-                                            <th style="width: 240px;">Base Cost</th>
-                                            <td id="calcBase">-</td>
+                                            <td>Base Cost</td>
+                                            <td id="calcBase" class="text-end">-</td>
                                         </tr>
                                         <tr>
-                                            <th>Distance Cost</th>
-                                            <td id="calcDistance">-</td>
+                                            <td>Distance Cost</td>
+                                            <td id="calcDistance" class="text-end">-</td>
                                         </tr>
                                         <tr>
-                                            <th>Weight Cost</th>
-                                            <td id="calcWeight">-</td>
+                                            <td>Weight Cost</td>
+                                            <td id="calcWeight" class="text-end">-</td>
                                         </tr>
                                         <tr>
-                                            <th>Fuel Surcharge</th>
-                                            <td id="calcFuel">-</td>
+                                            <td>Fuel Surcharge</td>
+                                            <td id="calcFuel" class="text-end">-</td>
                                         </tr>
                                         <tr>
-                                            <th>Fragile Surcharge</th>
-                                            <td id="calcFragile">-</td>
+                                            <td>Fragile Surcharge</td>
+                                            <td id="calcFragile" class="text-end">-</td>
                                         </tr>
                                         <tr>
-                                            <th>Insurance Cost</th>
-                                            <td id="calcInsurance">-</td>
+                                            <td>Insurance Cost</td>
+                                            <td id="calcInsurance" class="text-end">-</td>
                                         </tr>
-                                        <tr class="table-primary">
-                                            <th>Total Cost</th>
-                                            <td id="calcTotal" class="fw-bold">-</td>
+                                        <tr class="table-primary fw-bold fs-5">
+                                            <td>Total Cost</td>
+                                            <td id="calcTotal" class="text-end">-</td>
                                         </tr>
                                         <tr>
-                                            <th>Estimated SLA (days)</th>
-                                            <td id="calcSla">-</td>
+                                            <td class="text-muted small italic">Estimated Delivery (SLA)</td>
+                                            <td id="calcSla" class="text-end text-muted small">-</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -274,15 +185,29 @@
 
 @push('scripts')
 <script>
-    const API_BASE = '/api/v1';
-    const TOKEN_KEY = 'module3_customer_token';
+    const API_BASE  = '/api/v1';
+    const TOKEN_KEY = 'module3_jwt_token';
 
-    const globalAlert = document.getElementById('globalAlert');
-    const tokenBadge = document.getElementById('tokenBadge');
-    const tokenPreview = document.getElementById('tokenPreview');
+    // ── Guard: redirect ke login jika belum terautentikasi ──
+    (function guardAuth() {
+        if (!localStorage.getItem(TOKEN_KEY)) {
+            window.location.replace('/auth/login');
+        }
+    })();
+
+    const globalAlert  = document.getElementById('globalAlert');
+    const navUserName  = document.getElementById('navUserName');
+
+    // Tampilkan info user dari localStorage
+    (function showUserInfo() {
+        const user = JSON.parse(localStorage.getItem('module3_user') || '{}');
+        if (user.name && navUserName) {
+            navUserName.textContent = '👤 ' + user.name;
+        }
+    })();
 
     function showAlert(message, type = 'info') {
-        globalAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+        globalAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
     }
 
     function toCurrency(value) {
@@ -293,31 +218,8 @@
         }).format(Number(value || 0));
     }
 
-    function saveToken(token) {
-        localStorage.setItem(TOKEN_KEY, token);
-        refreshTokenUI();
-    }
-
     function getToken() {
         return localStorage.getItem(TOKEN_KEY) || '';
-    }
-
-    function clearToken() {
-        localStorage.removeItem(TOKEN_KEY);
-        refreshTokenUI();
-    }
-
-    function refreshTokenUI() {
-        const token = getToken();
-        if (token) {
-            tokenBadge.className = 'badge text-bg-success';
-            tokenBadge.textContent = 'Token: Aktif';
-            tokenPreview.value = token;
-        } else {
-            tokenBadge.className = 'badge text-bg-secondary';
-            tokenBadge.textContent = 'Token: Belum login';
-            tokenPreview.value = '';
-        }
     }
 
     function formToObject(form) {
@@ -331,109 +233,85 @@
     }
 
     async function callApi(path, method = 'GET', body = null, withAuth = false) {
-        const headers = {
-            Accept: 'application/json',
-        };
-
-        if (body !== null) {
-            headers['Content-Type'] = 'application/json';
-        }
-
+        const headers = { Accept: 'application/json' };
+        if (body !== null) headers['Content-Type'] = 'application/json';
         if (withAuth) {
             const token = getToken();
-            if (!token) {
-                throw new Error('Silakan login terlebih dahulu untuk endpoint ini.');
-            }
+            if (!token) throw new Error('Silakan login terlebih dahulu.');
             headers.Authorization = `Bearer ${token}`;
         }
 
         const response = await fetch(`${API_BASE}${path}`, {
-            method,
-            headers,
-            body: body !== null ? JSON.stringify(body) : null,
+            method, headers, body: body !== null ? JSON.stringify(body) : null,
         });
 
         let payload = {};
-        try {
-            payload = await response.json();
-        } catch (_) {
-            payload = {};
-        }
+        try { payload = await response.json(); } catch (_) {}
 
         if (!response.ok) {
-            const errorMessage = payload.message || Object.values(payload.errors || {}).flat().join(' | ') || 'Request gagal diproses.';
+            if (response.status === 401) {
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem('module3_user');
+                window.location.href = '/auth/login';
+                throw new Error('Sesi berakhir. Silakan login kembali.');
+            }
+            const errorMessage = payload.message || Object.values(payload.errors || {}).flat().join(' | ') || 'Request gagal.';
             throw new Error(errorMessage);
         }
-
         return payload;
     }
 
-    document.getElementById('registerForm').addEventListener('submit', async (event) => {
-        event.preventDefault();
+    let packagesLoaded = false;
+
+    async function loadPackages() {
+        if (packagesLoaded) return;
         try {
-            const payload = formToObject(event.target);
-            const result = await callApi('/auth/register', 'POST', payload, false);
-            if (result?.data?.token) {
-                saveToken(result.data.token);
+            const select = document.getElementById('packageSelect');
+            select.innerHTML = '<option value="">-- Loading packages... --</option>';
+            const response = await callApi('/package', 'GET', null, false);
+            select.innerHTML = '<option value="">-- Choose Package --</option>';
+            if (response && response.success && response.data) {
+                response.data.forEach(pkg => {
+                    select.innerHTML += `<option value="${pkg.id}">${pkg.tracking_number} (${pkg.origin} ➔ ${pkg.destination}) - ${pkg.weight} kg</option>`;
+                });
+                packagesLoaded = true;
+            } else {
+                select.innerHTML = '<option value="">Failed to load packages</option>';
             }
-            showAlert(result.message || 'Register berhasil.', 'success');
         } catch (error) {
-            showAlert(error.message, 'danger');
+            console.error('Error loading packages:', error);
+            document.getElementById('packageSelect').innerHTML = '<option value="">Error loading packages</option>';
         }
-    });
+    }
 
-    document.getElementById('loginForm').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        try {
-            const payload = formToObject(event.target);
-            const result = await callApi('/auth/login', 'POST', payload, false);
-            if (result?.data?.token) {
-                saveToken(result.data.token);
-            }
-            showAlert(result.message || 'Login berhasil.', 'success');
-        } catch (error) {
-            showAlert(error.message, 'danger');
-        }
-    });
+    function toggleCalcMode(mode) {
+        const packageSelectContainer = document.getElementById('packageSelectContainer');
+        const weightContainer = document.getElementById('weightContainer');
+        const distanceContainer = document.getElementById('distanceContainer');
+        const packageSelect = document.getElementById('packageSelect');
+        const calcWeightInput = document.getElementById('calcWeightInput');
+        const calcDistanceInput = document.getElementById('calcDistanceInput');
 
-    document.getElementById('btnLogout').addEventListener('click', async () => {
-        try {
-            await callApi('/auth/logout', 'POST', {}, true);
-            clearToken();
-            showAlert('Logout berhasil.', 'success');
-        } catch (error) {
-            clearToken();
-            showAlert(error.message + ' Token lokal tetap dihapus.', 'warning');
-        }
-    });
+        if (mode === 'package') {
+            packageSelectContainer.style.display = 'block';
+            weightContainer.style.display = 'none';
+            distanceContainer.style.display = 'none';
 
-    document.getElementById('btnLoadProfile').addEventListener('click', async () => {
-        try {
-            const result = await callApi('/customer/shipping-profile', 'GET', null, true);
-            const data = result.data || {};
-            const form = document.getElementById('profileForm');
-            Object.keys(data).forEach((key) => {
-                const field = form.querySelector(`[name="${key}"]`);
-                if (field) {
-                    field.value = data[key] ?? '';
-                }
-            });
-            showAlert(result.message || 'Profil berhasil diambil.', 'success');
-        } catch (error) {
-            showAlert(error.message, 'danger');
-        }
-    });
+            packageSelect.setAttribute('required', 'required');
+            calcWeightInput.removeAttribute('required');
+            calcDistanceInput.removeAttribute('required');
 
-    document.getElementById('profileForm').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        try {
-            const payload = formToObject(event.target);
-            const result = await callApi('/customer/shipping-profile', 'PUT', payload, true);
-            showAlert(result.message || 'Profil berhasil disimpan.', 'success');
-        } catch (error) {
-            showAlert(error.message, 'danger');
+            loadPackages();
+        } else {
+            packageSelectContainer.style.display = 'none';
+            weightContainer.style.display = 'block';
+            distanceContainer.style.display = 'block';
+
+            packageSelect.removeAttribute('required');
+            calcWeightInput.setAttribute('required', 'required');
+            calcDistanceInput.setAttribute('required', 'required');
         }
-    });
+    }
 
     document.getElementById('calculatorForm').addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -441,9 +319,18 @@
             const payload = formToObject(event.target);
             payload.is_fragile = document.getElementById('isFragile').checked;
             payload.use_insurance = document.getElementById('useInsurance').checked;
-            payload.weight_kg = Number(payload.weight_kg);
-            payload.distance_km = Number(payload.distance_km);
             payload.declared_value = Number(payload.declared_value || 0);
+
+            const isPackageMode = document.getElementById('modePackage').checked;
+            if (isPackageMode) {
+                payload.package_id = Number(payload.package_id);
+                delete payload.weight_kg;
+                delete payload.distance_km;
+            } else {
+                payload.weight_kg = Number(payload.weight_kg);
+                payload.distance_km = Number(payload.distance_km);
+                delete payload.package_id;
+            }
 
             const result = await callApi('/customer/shipping-cost/calculate', 'POST', payload, true);
             const breakdown = result.data?.cost_breakdown || {};
@@ -457,12 +344,26 @@
             document.getElementById('calcTotal').textContent = toCurrency(result.data?.total_cost || 0);
             document.getElementById('calcSla').textContent = `${result.data?.estimated_sla_days ?? '-'} hari`;
 
+            // Display package details if package mode is active and details returned
+            const detailsContainer = document.getElementById('packageDetailsContainer');
+            const details = result.data?.package_details;
+            if (details) {
+                detailsContainer.style.display = 'block';
+                document.getElementById('detailTracking').textContent = details.tracking_number;
+                document.getElementById('detailRoute').textContent = `${details.origin} ➔ ${details.destination}`;
+                document.getElementById('detailDimensions').textContent = details.dimensions;
+                document.getElementById('detailActualWeight').textContent = `${details.actual_weight} kg`;
+                document.getElementById('detailVolumetricWeight').textContent = `${details.volumetric_weight} kg`;
+                document.getElementById('detailEffectiveWeight').textContent = `${details.effective_weight} kg`;
+                document.getElementById('detailDistance').textContent = `${details.calculated_distance_km} km`;
+            } else {
+                detailsContainer.style.display = 'none';
+            }
+
             showAlert(result.message || 'Perhitungan ongkir berhasil.', 'success');
         } catch (error) {
             showAlert(error.message, 'danger');
         }
     });
-
-    refreshTokenUI();
 </script>
 @endpush

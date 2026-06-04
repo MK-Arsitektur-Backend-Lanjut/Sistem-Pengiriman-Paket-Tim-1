@@ -1,5 +1,5 @@
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+<script src="/vendor/axios.min.js"></script>
 <script>
     const API_URL = '/api/v1';
     const warehouseModal = new bootstrap.Modal(document.getElementById('warehouseModal'));
@@ -53,7 +53,7 @@
                 document.getElementById('warehouse_hub_id').value = data.hub_id || '';
                 document.getElementById('warehouse_capacity').value = data.capacity || '';
                 document.getElementById('warehouse_current_load').value = data.current_load || 0;
-                document.getElementById('warehouse_status').value = data.status || 'active';
+                document.getElementById('warehouse_status').value = data.status || 'available';
                 
                 calculateUsagePercentage();
                 
@@ -95,7 +95,18 @@
                     alert('Error: ' + response.data.message);
                 }
             })
-            .catch(error => alert('Error saving warehouse'));
+            .catch(error => {
+                if (error.response && error.response.data) {
+                    let msg = error.response.data.message;
+                    if (error.response.data.errors) {
+                        const errs = Object.values(error.response.data.errors).flat();
+                        msg += '\n- ' + errs.join('\n- ');
+                    }
+                    alert('Error: ' + msg);
+                } else {
+                    alert('Error saving warehouse');
+                }
+            });
     }
 
     function deleteWarehouse(id) {
@@ -128,6 +139,11 @@
             catEl.textContent = '-';
         }
         
+        const originDestRow = document.getElementById('origin_destination_row');
+        if (originDestRow) {
+            originDestRow.classList.remove('d-none');
+        }
+        
         updateLocation();
         
         loadFleetOptions(); // Load fleets for dropdown
@@ -157,6 +173,11 @@
                 
                 document.getElementById('packageModalTitle').textContent = 'Edit Package';
                 document.getElementById('packageSubmitBtn').textContent = 'Update';
+                
+                const originDestRow = document.getElementById('origin_destination_row');
+                if (originDestRow) {
+                    originDestRow.classList.add('d-none');
+                }
                 
                 updateVolumetric();
                 loadFleetOptions();

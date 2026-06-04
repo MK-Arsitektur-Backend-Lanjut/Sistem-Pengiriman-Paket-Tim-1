@@ -3,6 +3,7 @@
 @section('title', 'Modul 4 - Fleet & Hub Management')
 @section('meta_description', 'Dashboard Modul 4 untuk monitoring kapasitas hub dan manajemen armada secara real-time.')
 @section('active_nav', 'module4')
+@section('requires_auth', '1')
 
 @php
     $fleetPageItems = collect($fleets->items());
@@ -24,7 +25,7 @@
             'icon_class' => 'kpi-icon-hub',
             'pill_class' => 'pill-hub',
             'label' => 'Hub Aktif',
-            'value' => $hubs->count(),
+            'value' => $warehousesCount,
             'caption' => 'lokasi terdeteksi',
         ],
         [
@@ -93,20 +94,24 @@
                     </div>
                     <div class="hub-scroll-area">
                         <ul class="list-group list-group-flush">
-                            @foreach($hubs->take(15) as $hub)
+                            @foreach($warehouses->take(15) as $warehouse)
                                 @php
-                                    $percentage = $hub->capacity > 0 ? round(($hub->current_load / $hub->capacity) * 100) : 0;
+                                    $percentage = $warehouse->capacity > 0 ? round(($warehouse->current_load / $warehouse->capacity) * 100) : 0;
                                     $color = $percentage >= 90 ? 'danger' : ($percentage >= 70 ? 'warning' : 'success');
                                 @endphp
                                 <li class="list-group-item px-3 py-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong class="small">{{ $hub->name }}</strong>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong class="small">{{ $warehouse->warehouse_name }}</strong>
                                         <span class="badge bg-{{ $color }}">{{ $percentage }}%</span>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-geo-alt text-muted me-1" style="font-size: 0.85rem;"></i>
+                                        <small class="text-muted">{{ $warehouse->location }}</small>
                                     </div>
                                     <div class="progress hub-progress mb-2">
                                         <div class="progress-bar bg-{{ $color }}" style="width: {{ $percentage }}%"></div>
                                     </div>
-                                    <small class="text-muted">{{ number_format($hub->current_load) }} / {{ number_format($hub->capacity) }} kapasitas terisi</small>
+                                    <small class="text-muted">{{ number_format($warehouse->current_load) }} / {{ number_format($warehouse->capacity) }} kapasitas terisi</small>
                                 </li>
                             @endforeach
                         </ul>

@@ -56,25 +56,29 @@ class WarehouseRepository implements WarehouseRepositoryInterface
 
     public function getStatistics()
     {
-        $warehouses = Warehouse::with('packages')->get();
+        $stats = Warehouse::query()
+            ->selectRaw("
+                COUNT(*) as total_warehouses,
+                SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_warehouses,
+                SUM(CASE WHEN status = 'full' THEN 1 ELSE 0 END) as full_warehouses,
+                SUM(CASE WHEN status = 'overload' THEN 1 ELSE 0 END) as overload_warehouses,
+                SUM(capacity) as total_capacity,
+                SUM(current_load) as total_current_load
+            ")
+            ->first();
 
-        $totalWarehouses = $warehouses->count();
-        $availableWarehouses = $warehouses->where('status', 'available')->count();
-        $fullWarehouses = $warehouses->where('status', 'full')->count();
-        $overloadWarehouses = $warehouses->where('status', 'overload')->count();
-        $totalPackages = $warehouses->sum(function ($w) {
-            return $w->packages->count();
-        });
-        $totalCapacity = $warehouses->sum('capacity');
-        $totalCurrentLoad = $warehouses->sum('current_load');
+        $totalPackages = \App\Models\Package::count();
+
+        $totalCapacity = (int) ($stats->total_capacity ?? 0);
+        $totalCurrentLoad = (int) ($stats->total_current_load ?? 0);
 
         return [
-            'total_warehouses' => $totalWarehouses,
-            'available_warehouses' => $availableWarehouses,
-            'full_warehouses' => $fullWarehouses,
-            'overload_warehouses' => $overloadWarehouses,
+            'total_warehouses' => (int) ($stats->total_warehouses ?? 0),
+            'available_warehouses' => (int) ($stats->available_warehouses ?? 0),
+            'full_warehouses' => (int) ($stats->full_warehouses ?? 0),
+            'overload_warehouses' => (int) ($stats->overload_warehouses ?? 0),
             // Backward-compat alias untuk view yang masih pakai 'active_warehouses'
-            'active_warehouses' => $availableWarehouses,
+            'active_warehouses' => (int) ($stats->available_warehouses ?? 0),
             'total_packages' => $totalPackages,
             'total_capacity' => $totalCapacity,
             'total_current_load' => $totalCurrentLoad,
@@ -93,5 +97,15 @@ class WarehouseRepository implements WarehouseRepositoryInterface
         }
 
         return round(($warehouse->current_load / $warehouse->capacity) * 100, 2);
+    }
+
+    public function getWarehouseCount()
+    {
+        return Warehouse::count();
+    }
+
+    public function getLimitWarehouses($limit)
+    {
+        return Warehouse::limit($limit)->get();
     }
 }

@@ -11,7 +11,7 @@ class ShippingProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = auth('api')->user();
         $profiles = $this->readProfiles();
         $profile = $profiles[(string) $user->id] ?? null;
 
@@ -34,7 +34,7 @@ class ShippingProfileController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $user = $request->user();
+        $user = auth('api')->user();
         $profiles = $this->readProfiles();
         $profiles[(string) $user->id] = $payload;
         Storage::disk('local')->put('module3/shipping_profiles.json', json_encode($profiles, JSON_PRETTY_PRINT));

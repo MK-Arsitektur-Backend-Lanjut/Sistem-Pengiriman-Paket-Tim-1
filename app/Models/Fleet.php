@@ -28,11 +28,8 @@ class Fleet extends Model
         return $this->hasMany(FleetLog::class);
     }
 
-    /**
-     * M2 Integration: Shipments assigned to this fleet
-     */
-    public function shipments()
+    public function packages()
     {
-        return $this->hasMany(Shipment::class, 'fleet_id');
+        return $this->hasMany(Package::class, 'fleet_id');
     }
 }

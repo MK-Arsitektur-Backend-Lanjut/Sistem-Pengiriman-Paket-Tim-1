@@ -2,6 +2,7 @@
 @section('title', 'Modul 1 - Warehouse & Package Monitoring')
 @section('meta_description', 'Monitoring kapasitas warehouse dan manajemen paket masuk/keluar.')
 @section('active_nav', 'module1')
+@section('requires_auth', '1')
 @include('module1.partials.styles')
 @section('content')
 <section class="py-4">
@@ -105,7 +106,7 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-4">Name</th><th>Location</th><th>Linked Hub</th>
+                    <th class="ps-4">Name</th><th>Location</th>
                     <th>Capacity</th><th>Current Load</th><th>Usage %</th><th>Status</th><th class="pe-4">Actions</th>
                 </tr>
             </thead>
@@ -113,8 +114,7 @@
                 @forelse($warehouses as $warehouse)
                 <tr>
                     <td class="ps-4 fw-semibold text-primary">{{ $warehouse['warehouse_name'] }}</td>
-                    <td class="text-muted">{{ $warehouse['location'] }}</td>
-                    <td>@if($warehouse['hub_name'] ?? false)<span class="hub-chip"><i class="bi bi-geo-alt-fill"></i>{{ $warehouse['hub_name'] }}</span>@else<span class="text-muted">-</span>@endif</td>
+                    <td><span class="hub-chip"><i class="bi bi-geo-alt-fill"></i> {{ $warehouse['location'] }}</span></td>
                     <td>{{ number_format($warehouse['capacity']) }}</td>
                     <td>{{ number_format($warehouse['current_load']) }}</td>
                     <td>
@@ -137,7 +137,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="9" class="text-center text-muted py-5">No warehouses found.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-5">No warehouses found.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -160,7 +160,6 @@
                     <th>Effective Weight</th>
                     <th>Dimensions (L&times;W&times;H)</th>
                     <th>Category</th>
-                    <th>Last Location</th>
                     <th>Status</th>
                     <th class="pe-4">Actions</th>
                 </tr>
@@ -179,9 +178,10 @@
                     
                     $st = strtolower($package['status'] ?? 'registered');
                     $bg = 'secondary';
-                    if ($st === 'pending') $bg = 'danger';
+                    if ($st === 'pending' || $st === 'failed') $bg = 'danger';
                     elseif ($st === 'delivered') $bg = 'primary';
                     elseif ($st === 'shipped' || $st === 'in_transit') $bg = 'success';
+                    elseif ($st === 'arrived_at_hub') $bg = 'info';
                 @endphp
                 <tr>
                     <td class="ps-4 fw-bold text-primary">{{ $package['tracking_number'] }}</td>
@@ -203,33 +203,22 @@
                     </td>
                     <td><span class="badge bg-{{ $catColor }}">{{ ucfirst($cat) }}</span></td>
                     <td>
-                        @if($st === 'delivered')
-                        <span class="text-primary fw-semibold"><i class="bi bi-house-door-fill me-1"></i>{{ $package['destination'] }}</span>
-                        @elseif($st === 'shipped' || $st === 'in_transit')
-                        <span class="text-success"><i class="bi bi-truck me-1"></i>To {{ $package['destination'] }}</span>
-                        @elseif($hubName)
-                        <span class="hub-chip"><i class="bi bi-geo-alt-fill"></i>{{ $hubName }}</span>
-                        @else
-                        <span class="text-muted"><i class="bi bi-box me-1"></i>Origin: {{ $package['origin'] }}</span>
-                        @endif
-                    </td>
-                    <td>
                         <span class="badge bg-{{ $bg }}">{{ ucfirst(str_replace('_',' ',$st)) }}</span>
                     </td>
                     <td class="pe-4">
                         <button onclick="editPackage({{ $package['id'] }})" class="btn btn-warning btn-sm me-1"><i class="bi bi-pencil"></i></button>
                         <button onclick="deletePackage({{ $package['id'] }})" class="btn btn-danger btn-sm me-1"><i class="bi bi-trash"></i></button>
-                        @if($hubId)
-                        <button onclick="openFleetModal({{ $hubId }},'{{ addslashes($hubName) }}')" class="btn btn-primary btn-sm rounded-pill me-1"><i class="bi bi-radar me-1"></i>Track</button>
-                        @endif
-                        <button onclick="openCreateShipmentModal({{ $package['id'] }}, '{{ addslashes($package['tracking_number']) }}')" class="btn btn-success btn-sm rounded-pill"><i class="bi bi-box-arrow-right me-1"></i>Shipment</button>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="10" class="text-center text-muted py-5">No packages found.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-5">No packages found.</td></tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+    <!-- Pagination Links -->
+    <div class="d-flex justify-content-center py-3 border-top">
+        {{ $packages->links() }}
     </div>
 </div>
 </div>
@@ -247,7 +236,7 @@
                     <input type="hidden" id="warehouseId">
                     <div class="mb-3"><label class="form-label">Warehouse Name</label><input type="text" class="form-control" id="warehouse_name" required></div>
                     <div class="mb-3"><label class="form-label">Location</label><input type="text" class="form-control" id="warehouse_location" required></div>
-                    <div class="mb-3">
+                    <div class="mb-3 d-none">
                         <label class="form-label">Linked Hub</label>
                         <select class="form-select" id="warehouse_hub_id">
                             <option value="">- No Hub -</option>
@@ -268,7 +257,7 @@
                                 <input type="hidden" id="warehouse_usage" value="0">
                             </div>
                         </div>
-                        <div class="col-md-6"><div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="warehouse_status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>
+                        <div class="col-md-6"><div class="mb-3"><label class="form-label">Status</label><select class="form-select" id="warehouse_status" name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -306,7 +295,7 @@
                         <div class="col-md-6 mb-3"><label class="form-label">Sender Name</label><input type="text" class="form-control" id="sender_name" required></div>
                         <div class="col-md-6 mb-3"><label class="form-label">Receiver Name</label><input type="text" class="form-control" id="receiver_name" required></div>
                     </div>
-                    <div class="row">
+                    <div class="row" id="origin_destination_row">
                         <div class="col-md-6 mb-3"><label class="form-label">Origin</label><input type="text" class="form-control" id="origin" required oninput="updateLocation()"></div>
                         <div class="col-md-6 mb-3"><label class="form-label">Destination</label><input type="text" class="form-control" id="destination" required oninput="updateLocation()"></div>
                     </div>
@@ -318,6 +307,8 @@
                                 <option value="registered">Registered</option>
                                 <option value="shipped">Shipped</option>
                                 <option value="delivered">Delivered</option>
+                                <option value="failed">Failed</option>
+                                <option value="arrived_at_hub">Arrived at Hub</option>
                             </select>
                         </div>
                     </div>

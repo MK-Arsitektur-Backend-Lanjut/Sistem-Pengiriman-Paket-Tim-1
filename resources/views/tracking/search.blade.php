@@ -3,6 +3,7 @@
 @section('title', 'Modul 2 - Cari Paket')
 @section('meta_description', 'Halaman pencarian paket menggunakan nomor resi atau data pengirim.')
 @section('active_nav', 'tracking')
+@section('requires_auth', '1')
 
 @push('styles')
 <style>

@@ -2,21 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\Contracts\ShipmentRepositoryInterface;
-use App\Repositories\Contracts\TrackingRepositoryInterface;
+use App\Repositories\Contracts\PackageRepositoryInterface;
+use App\Services\CacheService;
+use App\Models\Hub;
+use App\Models\Fleet;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TrackingWebController extends Controller
 {
-    protected $shipmentRepo;
-    protected $trackingRepo;
+    protected PackageRepositoryInterface $packageRepo;
 
-    public function __construct(
-        ShipmentRepositoryInterface $shipmentRepo,
-        TrackingRepositoryInterface $trackingRepo
-    ) {
-        $this->shipmentRepo = $shipmentRepo;
-        $this->trackingRepo = $trackingRepo;
+    public function __construct(PackageRepositoryInterface $packageRepo)
+    {
+        $this->packageRepo = $packageRepo;
     }
 
     /**
@@ -28,18 +27,34 @@ class TrackingWebController extends Controller
         $search = $request->query('search');
 
         try {
-            $shipments = $this->shipmentRepo->getAllShipments($search, $status);
-            
-            // Statistik
-            $stats = [
-                'total' => \App\Models\Shipment::count(),
-                'pending' => \App\Models\Shipment::where('status', 'pending')->count(),
-                'in_transit' => \App\Models\Shipment::where('status', 'in_transit')->count(),
-                'delivered' => \App\Models\Shipment::where('status', 'delivered')->count(),
-                'failed' => \App\Models\Shipment::where('status', 'failed')->count(),
-            ];
+            $packages = $this->packageRepo->getAllPackagesPaginated([
+                'search' => $search,
+                'status' => $status
+            ], 15);
 
-            return view('tracking.index', compact('shipments', 'stats', 'status', 'search'));
+            // Statistik dari packages.package_status
+            $stats = CacheService::remember(
+                CacheService::keyDashboardStats(),
+                function () {
+                    $rows = DB::table('packages')
+                        ->selectRaw('package_status as status, COUNT(*) as total')
+                        ->groupBy('package_status')
+                        ->pluck('total', 'status');
+
+                    return [
+                        'total'            => $rows->sum(),
+                        'registered'       => (int) ($rows['registered']       ?? 0),
+                        'in_transit'       => (int) ($rows['in_transit']       ?? 0),
+                        'delivered'        => (int) ($rows['delivered']        ?? 0),
+                        'failed'           => (int) ($rows['failed']           ?? 0),
+                        'out_for_delivery' => (int) ($rows['out_for_delivery'] ?? 0),
+                    ];
+                },
+                CacheService::TTL_SHORT,
+                [CacheService::TAG_STATS, CacheService::TAG_PACKAGE]
+            );
+
+            return view('tracking.index', compact('packages', 'stats', 'status', 'search'));
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal memuat data: ' . $e->getMessage());
         }
@@ -48,15 +63,18 @@ class TrackingWebController extends Controller
     /**
      * Lihat detail paket berdasarkan tracking number
      */
-    public function show($trackingNumber)
+    public function show(string $trackingNumber)
     {
         try {
-            $shipment = $this->shipmentRepo->getShipmentByTrackingNumber($trackingNumber);
-            $histories = $this->trackingRepo->getHistoryByShipment($shipment->id);
-            $latestHistory = $histories->first();
+            $package   = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+            $logs      = $package->histories()->orderByDesc('recorded_at')->get();
+            $latestLog = $package->latestLog;
 
-            return view('tracking.show', compact('shipment', 'histories', 'latestHistory'));
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            $hubs = Hub::orderBy('name')->get();
+            $fleets = Fleet::orderBy('plate_number')->get();
+
+            return view('tracking.show', compact('package', 'logs', 'latestLog', 'hubs', 'fleets'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return back()->with('error', 'Paket tidak ditemukan');
         }
     }
@@ -64,14 +82,14 @@ class TrackingWebController extends Controller
     /**
      * Tampilkan timeline detail paket
      */
-    public function timeline($trackingNumber)
+    public function timeline(string $trackingNumber)
     {
         try {
-            $shipment = $this->shipmentRepo->getShipmentByTrackingNumber($trackingNumber);
-            $histories = $this->trackingRepo->getHistoryByShipment($shipment->id);
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+            $logs    = $package->histories;
 
-            return view('tracking.timeline', compact('shipment', 'histories'));
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return view('tracking.timeline', compact('package', 'logs'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return back()->with('error', 'Paket tidak ditemukan');
         }
     }
@@ -96,7 +114,7 @@ class TrackingWebController extends Controller
         }
 
         try {
-            $results = $this->shipmentRepo->searchShipment($keyword);
+            $results = $this->packageRepo->getAllPackagesPaginated(['search' => $keyword], 15);
             return view('tracking.search-results', compact('results', 'keyword'));
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal melakukan pencarian');
@@ -105,7 +123,7 @@ class TrackingWebController extends Controller
 
     /**
      * API search (untuk autocomplete)
-     * Search di shipment tracking_number atau di package sender/receiver data
+     * Search di packages.tracking_number, sender_name, receiver_name
      */
     public function apiSearch(Request $request)
     {
@@ -115,28 +133,56 @@ class TrackingWebController extends Controller
             return response()->json([]);
         }
 
-        // Search in shipments (tracking) atau packages (sender_name, receiver_name)
-        $results = \App\Models\Shipment::where('tracking_number', 'like', "%$q%")
-            ->orWhereHas('package', function ($query) use ($q) {
-                $query->where('sender_name', 'like', "%$q%")
-                      ->orWhere('receiver_name', 'like', "%$q%")
-                      ->orWhere('origin', 'like', "%$q%")
-                      ->orWhere('destination', 'like', "%$q%");
-            })
-            ->with('package')
+        $results = \App\Models\Package::where('tracking_number', 'like', "%$q%")
+            ->orWhere('sender_name', 'like', "%$q%")
+            ->orWhere('receiver_name', 'like', "%$q%")
+            ->orWhere('origin', 'like', "%$q%")
+            ->orWhere('destination', 'like', "%$q%")
+            ->with(['warehouse', 'hub', 'fleet'])
             ->limit(10)
-            ->select('id', 'tracking_number', 'package_id', 'status')
+            ->select('id', 'tracking_number', 'sender_name', 'receiver_name', 'package_status', 'hub_id', 'fleet_id')
             ->get();
 
-        // Format response untuk autocomplete
-        return response()->json($results->map(function ($shipment) {
-            return [
-                'id' => $shipment->id,
-                'tracking_number' => $shipment->tracking_number,
-                'sender_name' => $shipment->package?->sender_name ?? '-',
-                'receiver_name' => $shipment->package?->receiver_name ?? '-',
-                'status' => $shipment->status
-            ];
-        }));
+        return response()->json($results->map(fn ($package) => [
+            'id'              => $package->id,
+            'tracking_number' => $package->tracking_number,
+            'sender_name'     => $package->sender_name,
+            'receiver_name'   => $package->receiver_name,
+            'status'          => $package->package_status,
+        ]));
+    }
+
+    /**
+     * Update status/lokasi paket dari web form
+     */
+    public function updateStatus(Request $request, string $trackingNumber)
+    {
+        $validated = $request->validate([
+            'status'      => 'required|in:registered,picked_up,in_transit,arrived_at_hub,out_for_delivery,delivered,failed,returned',
+            'hub_id'      => 'nullable|exists:hubs,id',
+            'fleet_id'    => 'nullable|exists:fleets,id',
+            'notes'       => 'nullable|string',
+            'recorded_at' => 'nullable|date',
+        ]);
+
+        try {
+            $package = $this->packageRepo->findPackageByTrackingNumber($trackingNumber);
+
+            if (in_array($package->package_status, ['delivered', 'failed', 'returned'])) {
+                return back()->with('error', 'Paket sudah dalam status final, tidak bisa diperbarui lagi.');
+            }
+
+            $this->packageRepo->updatePackageStatus($trackingNumber, $validated);
+
+            if ($validated['status'] === 'arrived_at_hub' && !empty($validated['hub_id'])) {
+                Hub::where('id', $validated['hub_id'])->increment('current_load');
+            }
+
+            return back()->with('success', 'Status/lokasi paket berhasil diperbarui!');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return back()->with('error', 'Paket tidak ditemukan');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memperbarui status: ' . $e->getMessage());
+        }
     }
 }

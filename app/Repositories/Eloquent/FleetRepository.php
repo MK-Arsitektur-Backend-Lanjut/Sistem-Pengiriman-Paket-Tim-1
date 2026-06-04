@@ -8,6 +8,7 @@ use App\Models\Hub;
 use App\Models\Package;
 use App\Models\Warehouse;
 use App\Repositories\Contracts\FleetRepositoryInterface;
+use App\Services\CacheService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -17,6 +18,13 @@ class FleetRepository implements FleetRepositoryInterface
     private const FLEET_PAGINATION_SIZE = 15;
 
     public function getAllFleets($search = null, $status = null, $hubId = null)
+    {
+        return $this->buildFleetQuery($search, $status, $hubId)
+            ->paginate(self::FLEET_PAGINATION_SIZE)
+            ->withQueryString();
+    }
+
+    private function buildFleetQuery($search, $status, $hubId): Builder
     {
         $query = Fleet::with('currentHub')->latest();
 
@@ -30,7 +38,7 @@ class FleetRepository implements FleetRepositoryInterface
             $query->where('current_hub_id', $hubId);
         }
 
-        return $query->paginate(self::FLEET_PAGINATION_SIZE)->withQueryString();
+        return $query;
     }
 
     public function getFleetById($id)
@@ -91,68 +99,47 @@ class FleetRepository implements FleetRepositoryInterface
         $fleet = Fleet::findOrFail($fleetId);
         $capacityKg = (float) $fleet->capacity;
 
-        [$quantityByPackageId, $orderedPackageIds] = $this->buildRequestedPackageMap($packageIds, $packageQuantities);
+        $quantities = [];
+        foreach ($packageIds as $id) {
+            if ((int)$id > 0) $quantities[(int)$id] = ($quantities[(int)$id] ?? 0) + 1;
+        }
+        foreach ($packageQuantities as $id => $qty) {
+            if ((int)$id > 0 && (int)$qty > 0) $quantities[(int)$id] = ($quantities[(int)$id] ?? 0) + (int)$qty;
+        }
 
-        $requestedPackageIds = collect(array_keys($quantityByPackageId));
-        [$packagesById, $missingPackageIds] = $this->loadPackagesById($requestedPackageIds);
-
+        $packages = Package::whereIn('id', array_keys($quantities))->get();
         $volumetricDivisor = $this->getVolumetricDivisorByFleetType((string) $fleet->type);
-        $calculatedPackages = $this->buildCalculatedPackages(
-            $requestedPackageIds,
-            $packagesById,
-            $quantityByPackageId,
-            $volumetricDivisor
-        );
 
-        $weightSummary = $this->summarizePackageWeights($calculatedPackages, $capacityKg);
-        $loadingSequence = $this->buildLoadingSequence($calculatedPackages, $orderedPackageIds, $strategy);
-        $loadingSimulation = $this->simulateCapacityLoading($loadingSequence, $capacityKg);
+        $totalChargeableWeight = 0;
+        $totalPackages = 0;
 
-        $response = [
+        foreach ($packages as $package) {
+            $qty = $quantities[$package->id] ?? 0;
+            if ($qty <= 0) continue;
+
+            $volumeCm3 = (float) ($package->volume ?? ((float) $package->length * (float) $package->width * (float) $package->height));
+            $actualWeightKg = (float) $package->weight;
+            $volumetricWeightKg = round($volumeCm3 / $volumetricDivisor, 2);
+            $chargeableWeightKg = round(max($actualWeightKg, $volumetricWeightKg), 2);
+
+            $totalPackages += $qty;
+            $totalChargeableWeight += $chargeableWeightKg * $qty;
+        }
+
+        return [
             'fleet' => [
                 'id' => $fleet->id,
                 'plate_number' => $fleet->plate_number,
-                'type' => $fleet->type,
                 'capacity_kg' => $capacityKg,
             ],
-            'formula' => [
-                'description' => 'chargeable_weight_kg = max(actual_weight_kg, volume_cm3 / divisor)',
-                'volumetric_divisor' => $volumetricDivisor,
-                'strategy' => $strategy,
-            ],
             'summary' => [
-                'selected_package_count' => $weightSummary['selected_package_count'],
-                'selected_unique_package_count' => $calculatedPackages->count(),
-                'missing_package_ids' => $missingPackageIds,
-                'total_actual_weight_kg' => $weightSummary['total_actual_weight_kg'],
-                'total_volumetric_weight_kg' => $weightSummary['total_volumetric_weight_kg'],
-                'total_chargeable_weight_kg' => $weightSummary['total_chargeable_weight_kg'],
+                'total_packages' => $totalPackages,
+                'total_chargeable_weight_kg' => round($totalChargeableWeight, 2),
                 'fleet_capacity_kg' => $capacityKg,
-                'utilization_percentage_if_all_loaded' => $weightSummary['utilization_percentage_if_all_loaded'],
-                'can_fit_all_packages' => $weightSummary['can_fit_all_packages'],
-                'over_capacity_kg' => $weightSummary['over_capacity_kg'],
-                'average_chargeable_weight_per_package_kg' => $weightSummary['average_chargeable_weight_per_package_kg'],
-                'estimated_max_packages_by_average' => $weightSummary['estimated_max_packages_by_average'],
-            ],
-            'loading_simulation' => [
-                'loaded_package_count' => $loadingSimulation['loaded_package_count'],
-                'overflow_package_count' => $loadingSimulation['overflow_package_count'],
-                'used_capacity_kg' => $loadingSimulation['used_capacity_kg'],
-                'remaining_capacity_kg' => $loadingSimulation['remaining_capacity_kg'],
-                'loaded_package_ids' => collect($loadingSimulation['loaded_packages'])->pluck('id')->values()->all(),
-                'overflow_package_ids' => collect($loadingSimulation['overflow_packages'])->pluck('id')->values()->all(),
+                'can_fit_all_packages' => $totalChargeableWeight <= $capacityKg,
+                'over_capacity_kg' => round(max(0, $totalChargeableWeight - $capacityKg), 2),
             ],
         ];
-
-        if ($includeBreakdown) {
-            $response['package_breakdown'] = [
-                'all_requested_packages' => $calculatedPackages,
-                'loaded_packages' => $loadingSimulation['loaded_packages'],
-                'overflow_packages' => $loadingSimulation['overflow_packages'],
-            ];
-        }
-
-        return $response;
     }
 
     public function storeFleet(array $data)
@@ -308,208 +295,7 @@ class FleetRepository implements FleetRepositoryInterface
         ];
     }
 
-    private function buildRequestedPackageMap(array $packageIds, array $packageQuantities): array
-    {
-        $normalizedPackageIds = collect($packageIds)
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn (int $id): bool => $id > 0)
-            ->values();
 
-        $normalizedPackageQuantities = collect($packageQuantities)
-            ->mapWithKeys(function ($quantity, $id) {
-                $packageId = (int) $id;
-                $qty = (int) $quantity;
-
-                if ($packageId <= 0 || $qty <= 0) {
-                    return [];
-                }
-
-                return [$packageId => $qty];
-            })
-            ->all();
-
-        $quantityByPackageId = [];
-
-        foreach ($normalizedPackageIds as $packageId) {
-            $quantityByPackageId[$packageId] = ($quantityByPackageId[$packageId] ?? 0) + 1;
-        }
-
-        foreach ($normalizedPackageQuantities as $packageId => $qty) {
-            $quantityByPackageId[$packageId] = ($quantityByPackageId[$packageId] ?? 0) + $qty;
-        }
-
-        $orderedPackageIds = [];
-        $this->appendOrderedUniqueIds($orderedPackageIds, $normalizedPackageIds->all());
-        $this->appendOrderedUniqueIds($orderedPackageIds, array_keys($normalizedPackageQuantities));
-        $this->appendOrderedUniqueIds($orderedPackageIds, array_keys($quantityByPackageId));
-
-        return [$quantityByPackageId, $orderedPackageIds];
-    }
-
-    private function appendOrderedUniqueIds(array &$orderedIds, array $candidateIds): void
-    {
-        $existing = array_flip($orderedIds);
-
-        foreach ($candidateIds as $candidateId) {
-            $packageId = (int) $candidateId;
-
-            if ($packageId <= 0 || isset($existing[$packageId])) {
-                continue;
-            }
-
-            $orderedIds[] = $packageId;
-            $existing[$packageId] = true;
-        }
-    }
-
-    private function loadPackagesById(Collection $requestedPackageIds): array
-    {
-        $packagesById = Package::query()
-            ->whereIn('id', $requestedPackageIds)
-            ->get()
-            ->keyBy('id');
-
-        $missingPackageIds = $requestedPackageIds
-            ->diff($packagesById->keys())
-            ->values()
-            ->all();
-
-        return [$packagesById, $missingPackageIds];
-    }
-
-    private function buildCalculatedPackages(
-        Collection $requestedPackageIds,
-        Collection $packagesById,
-        array $quantityByPackageId,
-        int $volumetricDivisor
-    ): Collection {
-        return $requestedPackageIds->map(function (int $packageId) use ($packagesById, $quantityByPackageId, $volumetricDivisor) {
-            /** @var Package|null $package */
-            $package = $packagesById->get($packageId);
-
-            if (!$package) {
-                return null;
-            }
-
-            $volumeCm3 = (float) ($package->volume ?? ((float) $package->length * (float) $package->width * (float) $package->height));
-            $actualWeightKg = (float) $package->weight;
-            $volumetricWeightKg = round($volumeCm3 / $volumetricDivisor, 2);
-            $chargeableWeightKg = round(max($actualWeightKg, $volumetricWeightKg), 2);
-
-            return [
-                'id' => $package->id,
-                'tracking_number' => $package->tracking_number,
-                'quantity_requested' => (int) ($quantityByPackageId[$package->id] ?? 0),
-                'actual_weight_kg' => round($actualWeightKg, 2),
-                'volume_cm3' => round($volumeCm3, 2),
-                'volumetric_weight_kg' => $volumetricWeightKg,
-                'chargeable_weight_kg' => $chargeableWeightKg,
-            ];
-        })->filter()->values();
-    }
-
-    private function summarizePackageWeights(Collection $calculatedPackages, float $capacityKg): array
-    {
-        $selectedPackageCount = (int) $calculatedPackages->sum('quantity_requested');
-
-        $totalActualWeight = round((float) $calculatedPackages->sum(
-            fn (array $item): float => $item['actual_weight_kg'] * $item['quantity_requested']
-        ), 2);
-
-        $totalVolumetricWeight = round((float) $calculatedPackages->sum(
-            fn (array $item): float => $item['volumetric_weight_kg'] * $item['quantity_requested']
-        ), 2);
-
-        $totalChargeableWeight = round((float) $calculatedPackages->sum(
-            fn (array $item): float => $item['chargeable_weight_kg'] * $item['quantity_requested']
-        ), 2);
-
-        $averageChargeableWeight = $selectedPackageCount > 0
-            ? round($totalChargeableWeight / $selectedPackageCount, 2)
-            : 0.0;
-
-        $estimatedMaxPackagesByAverage = $averageChargeableWeight > 0
-            ? (int) floor($capacityKg / $averageChargeableWeight)
-            : 0;
-
-        return [
-            'selected_package_count' => $selectedPackageCount,
-            'total_actual_weight_kg' => $totalActualWeight,
-            'total_volumetric_weight_kg' => $totalVolumetricWeight,
-            'total_chargeable_weight_kg' => $totalChargeableWeight,
-            'utilization_percentage_if_all_loaded' => $capacityKg > 0
-                ? round(($totalChargeableWeight / $capacityKg) * 100, 2)
-                : 0.0,
-            'can_fit_all_packages' => $totalChargeableWeight <= $capacityKg,
-            'over_capacity_kg' => round(max(0, $totalChargeableWeight - $capacityKg), 2),
-            'average_chargeable_weight_per_package_kg' => $averageChargeableWeight,
-            'estimated_max_packages_by_average' => $estimatedMaxPackagesByAverage,
-        ];
-    }
-
-    private function buildLoadingSequence(Collection $calculatedPackages, array $orderedPackageIds, string $strategy): Collection
-    {
-        if ($strategy !== 'keep_order') {
-            return $calculatedPackages->sortBy('chargeable_weight_kg')->values();
-        }
-
-        return collect($orderedPackageIds)
-            ->map(fn (int $id) => $calculatedPackages->firstWhere('id', $id))
-            ->filter()
-            ->values();
-    }
-
-    private function simulateCapacityLoading(Collection $sequence, float $capacityKg): array
-    {
-        $loadedPackages = [];
-        $overflowPackages = [];
-        $usedCapacityKg = 0.0;
-
-        foreach ($sequence as $item) {
-            $quantityRequested = (int) $item['quantity_requested'];
-            $chargeableWeightKg = (float) $item['chargeable_weight_kg'];
-
-            if ($quantityRequested <= 0 || $chargeableWeightKg <= 0) {
-                continue;
-            }
-
-            $remainingCapacityBefore = max(0, $capacityKg - $usedCapacityKg);
-            $maxLoadableQty = (int) floor(($remainingCapacityBefore + 0.00001) / $chargeableWeightKg);
-
-            $loadedQty = max(0, min($quantityRequested, $maxLoadableQty));
-            $overflowQty = max(0, $quantityRequested - $loadedQty);
-
-            if ($loadedQty > 0) {
-                $loadedChargeableWeight = $loadedQty * $chargeableWeightKg;
-                $usedCapacityKg += $loadedChargeableWeight;
-
-                $loadedPackages[] = [
-                    ...$item,
-                    'loaded_quantity' => $loadedQty,
-                    'loaded_chargeable_weight_kg' => round($loadedChargeableWeight, 2),
-                ];
-            }
-
-            if ($overflowQty > 0) {
-                $overflowPackages[] = [
-                    ...$item,
-                    'overflow_quantity' => $overflowQty,
-                    'overflow_chargeable_weight_kg' => round($overflowQty * $chargeableWeightKg, 2),
-                ];
-            }
-        }
-
-        $usedCapacityKg = round($usedCapacityKg, 2);
-
-        return [
-            'loaded_packages' => $loadedPackages,
-            'overflow_packages' => $overflowPackages,
-            'loaded_package_count' => (int) collect($loadedPackages)->sum('loaded_quantity'),
-            'overflow_package_count' => (int) collect($overflowPackages)->sum('overflow_quantity'),
-            'used_capacity_kg' => $usedCapacityKg,
-            'remaining_capacity_kg' => round(max(0, $capacityKg - $usedCapacityKg), 2),
-        ];
-    }
 
     private function syncStatusLoadTransition(Fleet $fleet, string $oldStatus, string $newStatus): void
     {

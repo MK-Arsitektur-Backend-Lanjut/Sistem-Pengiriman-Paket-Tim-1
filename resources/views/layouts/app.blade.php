@@ -6,11 +6,18 @@
     <title>@yield('title', 'SiPaket Tim 1')</title>
     <meta name="description" content="@yield('meta_description', 'Sistem Pengiriman Paket terintegrasi untuk manajemen gudang, tracking, auth, dan fleet.')">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Self-hosted Inter font (no Google Fonts CDN needed) -->
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('/vendor/fonts/inter.woff2') format('woff2');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    <link href="/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.css">
 
     <style>
         :root {
@@ -140,7 +147,40 @@
 
 @include('layouts.partials.footer')
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+
+<script>
+    /**
+     * Global JWT Auth Guard — SiPaket Tim 1
+     * Runs on every page. Pages that require auth set @section('requires_auth','1').
+     * Also hides nav links with class="needs-auth" when not logged in.
+     */
+    (function globalAuthGuard() {
+        const TOKEN_KEY   = 'module3_jwt_token';
+        const token       = localStorage.getItem(TOKEN_KEY);
+        const requireAuth = '@yield('requires_auth')' === '1';
+
+        // Redirect ke login jika halaman butuh auth tapi tidak ada token
+        if (requireAuth && !token) {
+            window.location.replace('/auth/login');
+            return;
+        }
+
+        // Sembunyikan/tampilkan elemen navbar berdasarkan status login
+        document.addEventListener('DOMContentLoaded', function () {
+            // Elemen yang hanya tampil saat login
+            document.querySelectorAll('.nav-needs-auth').forEach(function (el) {
+                el.style.display = token ? '' : 'none';
+            });
+            // Elemen yang hanya tampil saat belum login
+            document.querySelectorAll('.nav-no-auth').forEach(function (el) {
+                el.style.display = token ? 'none' : '';
+            });
+        });
+    })();
+</script>
+
 @stack('scripts')
 </body>
 </html>
+

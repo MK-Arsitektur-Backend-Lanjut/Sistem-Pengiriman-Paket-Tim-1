@@ -23,9 +23,13 @@ class ShippingCalculatorController extends Controller
 
         $package = null;
         if (!empty($payload['package_id'])) {
-            $package = \App\Models\Package::find($payload['package_id']);
+            $package = \Illuminate\Support\Facades\Cache::remember('package_id_' . $payload['package_id'], 3600, function () use ($payload) {
+                return \App\Models\Package::find($payload['package_id']);
+            });
         } elseif (!empty($payload['tracking_number'])) {
-            $package = \App\Models\Package::where('tracking_number', $payload['tracking_number'])->first();
+            $package = \Illuminate\Support\Facades\Cache::remember('package_trk_' . $payload['tracking_number'], 3600, function () use ($payload) {
+                return \App\Models\Package::where('tracking_number', $payload['tracking_number'])->first();
+            });
         }
 
         if ($package) {

@@ -172,9 +172,22 @@ class CustomerAuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         try {
-            $user = JWTAuth::parseToken()->authenticate();
+            // Mengambil payload tanpa hit database untuk mendapatkan User ID
+            $payload = JWTAuth::parseToken()->getPayload();
+            $userId = $payload->get('sub');
 
-            if (!$user) {
+            // Menyimpan & mengambil profil dari Redis Cache selama 1 jam (3600 detik)
+            $profile = \Illuminate\Support\Facades\Cache::remember('user_profile_' . $userId, 3600, function () use ($userId) {
+                $user = User::find($userId);
+                return $user ? [
+                    'id'         => $user->id,
+                    'name'       => $user->name,
+                    'email'      => $user->email,
+                    'created_at' => $user->created_at,
+                ] : null;
+            });
+
+            if (!$profile) {
                 return response()->json([
                     'message' => 'Unauthorized. Silakan login terlebih dahulu.',
                 ], 401);
@@ -182,12 +195,7 @@ class CustomerAuthController extends Controller
 
             return response()->json([
                 'message' => 'Data profil berhasil diambil.',
-                'data' => [
-                    'id'         => $user->id,
-                    'name'       => $user->name,
-                    'email'      => $user->email,
-                    'created_at' => $user->created_at,
-                ],
+                'data' => $profile,
             ]);
         } catch (JWTException $e) {
             return response()->json([

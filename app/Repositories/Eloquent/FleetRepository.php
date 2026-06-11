@@ -19,9 +19,14 @@ class FleetRepository implements FleetRepositoryInterface
 
     public function getAllFleets($search = null, $status = null, $hubId = null)
     {
-        return $this->buildFleetQuery($search, $status, $hubId)
-            ->paginate(self::FLEET_PAGINATION_SIZE)
-            ->withQueryString();
+        $page = request()->query('page', 1);
+        $key = CacheService::keyFleetList($search ?? '', $status ?? '', $hubId ?? '') . ':page:' . $page;
+        
+        return CacheService::remember($key, function () use ($search, $status, $hubId) {
+            return $this->buildFleetQuery($search, $status, $hubId)
+                ->paginate(self::FLEET_PAGINATION_SIZE)
+                ->withQueryString();
+        }, CacheService::TTL_SHORT, [CacheService::TAG_FLEET]);
     }
 
     private function buildFleetQuery($search, $status, $hubId): Builder
@@ -70,23 +75,27 @@ class FleetRepository implements FleetRepositoryInterface
 
     public function calculateTransitDuration($fleetId)
     {
-        $fleet = Fleet::with('currentHub')->findOrFail($fleetId);
+        $key = 'fleets:transit_duration:' . $fleetId;
+        
+        return CacheService::remember($key, function () use ($fleetId) {
+            $fleet = Fleet::with('currentHub')->findOrFail($fleetId);
 
-        $allLogs = $this->getFleetLogs((int) $fleetId);
-        $completedLogs = $this->filterCompletedTransitLogs($allLogs);
-        $history = $this->mapTransitHistory($completedLogs, (string) $fleet->plate_number);
-        $summary = $this->buildTransitSummary($allLogs, $history, $completedLogs);
+            $allLogs = $this->getFleetLogs((int) $fleetId);
+            $completedLogs = $this->filterCompletedTransitLogs($allLogs);
+            $history = $this->mapTransitHistory($completedLogs, (string) $fleet->plate_number);
+            $summary = $this->buildTransitSummary($allLogs, $history, $completedLogs);
 
-        return [
-            // Legacy keys kept for existing frontend compatibility.
-            'fleet_id' => $fleet->id,
-            'average_duration_hours' => $summary['average_duration_hours'],
-            'history' => $history,
+            return [
+                // Legacy keys kept for existing frontend compatibility.
+                'fleet_id' => $fleet->id,
+                'average_duration_hours' => $summary['average_duration_hours'],
+                'history' => $history,
 
-            'fleet' => $this->formatFleetDetails($fleet),
-            'summary' => $summary,
-            'route_stats' => $this->buildRouteStats($history),
-        ];
+                'fleet' => $this->formatFleetDetails($fleet),
+                'summary' => $summary,
+                'route_stats' => $this->buildRouteStats($history),
+            ];
+        }, CacheService::TTL_MEDIUM, [CacheService::TAG_FLEET]);
     }
 
     public function calculateLoadPlan(
@@ -144,7 +153,9 @@ class FleetRepository implements FleetRepositoryInterface
 
     public function storeFleet(array $data)
     {
-        return Fleet::create($data);
+        $fleet = Fleet::create($data);
+        CacheService::flushTag(CacheService::TAG_FLEET);
+        return $fleet;
     }
 
     public function updateFleetStatus($id, $status)
@@ -161,6 +172,8 @@ class FleetRepository implements FleetRepositoryInterface
         $fleet->save();
 
         $this->syncStatusLoadTransition($fleet, $oldStatus, $newStatus);
+        
+        CacheService::flushTag(CacheService::TAG_FLEET);
 
         return $fleet;
     }
@@ -187,6 +200,8 @@ class FleetRepository implements FleetRepositoryInterface
         $fleet->save();
 
         $this->logFleetRelocation($fleet, (int) ($oldHubId ?: $destinationHubId), $destinationHubId);
+
+        CacheService::flushTag(CacheService::TAG_FLEET);
 
         return $fleet;
     }
@@ -340,6 +355,8 @@ class FleetRepository implements FleetRepositoryInterface
         $delta < 0
             ? $this->deductWarehouseLoads($warehouses, abs($delta))
             : $this->fillWarehouseLoads($warehouses, $delta);
+            
+        CacheService::flushTag(CacheService::TAG_WAREHOUSE, CacheService::TAG_HUB);
     }
 
     private function deductWarehouseLoads(Collection $warehouses, int $targetLoad): int

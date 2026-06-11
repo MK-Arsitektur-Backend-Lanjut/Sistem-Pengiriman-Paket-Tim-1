@@ -27,4 +27,9 @@ class Fleet extends Model
     {
         return $this->hasMany(FleetLog::class);
     }
+
+    public function packages()
+    {
+        return $this->hasMany(Package::class, 'fleet_id');
+    }
 }

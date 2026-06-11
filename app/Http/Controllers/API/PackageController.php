@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePackageRequest;
 use App\Http\Requests\UpdatePackageRequest;
 use App\Models\Package;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -23,7 +24,10 @@ class PackageController extends Controller
             $packages = $packages->map(function ($package) {
                 return [
                     ...$package->toArray(),
-                    'dimension_category' => $package->getDimensionCategory()
+                    'dimension_category'  => $package->getDimensionCategory(),
+                    'volumetric_weight'   => $this->calcVolumetricWeight($package),
+                    'effective_weight'    => $this->calcEffectiveWeight($package),
+                    'weight_basis'        => $this->calcEffectiveWeight($package) > $package->weight ? 'volumetric' : 'actual',
                 ];
             });
 
@@ -79,11 +83,17 @@ class PackageController extends Controller
             }
             
             $packageData['dimension_category'] = $package->getDimensionCategory();
+            $packageData['volumetric_weight']  = $this->calcVolumetricWeight($package);
+            $packageData['effective_weight']   = $this->calcEffectiveWeight($package);
+            $packageData['weight_basis']       = $this->calcEffectiveWeight($package) > $package->weight ? 'volumetric' : 'actual';
+
+            // Invalidasi cache paket
+            CacheService::flushTag(CacheService::TAG_PACKAGE, CacheService::TAG_STATS);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Package registered successfully',
-                'data' => $packageData
+                'data'    => $packageData
             ], 201);
         } catch (\Exception $e) {
             Log::error('Package store error: ' . $e->getMessage(), [
@@ -115,6 +125,9 @@ class PackageController extends Controller
             }
 
             $packageData['dimension_category'] = $package->getDimensionCategory();
+            $packageData['volumetric_weight']  = $this->calcVolumetricWeight($package);
+            $packageData['effective_weight']   = $this->calcEffectiveWeight($package);
+            $packageData['weight_basis']       = $this->calcEffectiveWeight($package) > $package->weight ? 'volumetric' : 'actual';
 
             return response()->json([
                 'success' => true,
@@ -199,11 +212,18 @@ class PackageController extends Controller
             }
             
             $packageData['dimension_category'] = $package->getDimensionCategory();
+            $packageData['volumetric_weight']  = $this->calcVolumetricWeight($package);
+            $packageData['effective_weight']   = $this->calcEffectiveWeight($package);
+            $packageData['weight_basis']       = $this->calcEffectiveWeight($package) > $package->weight ? 'volumetric' : 'actual';
+
+            // Invalidasi cache paket
+            CacheService::forget(CacheService::keyPackageById($id));
+            CacheService::flushTag(CacheService::TAG_PACKAGE, CacheService::TAG_STATS);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Package updated successfully',
-                'data' => $packageData
+                'data'    => $packageData
             ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -249,10 +269,14 @@ class PackageController extends Controller
 
             $package->delete();
 
+            // Invalidasi cache paket
+            CacheService::forget(CacheService::keyPackageById($id));
+            CacheService::flushTag(CacheService::TAG_PACKAGE, CacheService::TAG_STATS);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Package deleted successfully',
-                'data' => $package
+                'data'    => $package
             ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -314,11 +338,36 @@ class PackageController extends Controller
     private function getCategoryDescription($category)
     {
         $descriptions = [
-            'small' => 'Volume ≤ 1000 cm³',
+            'small'  => 'Volume ≤ 1000 cm³',
             'medium' => 'Volume 1000 - 5000 cm³',
-            'large' => 'Volume > 5000 cm³'
+            'large'  => 'Volume > 5000 cm³'
         ];
 
         return $descriptions[$category] ?? 'Unknown category';
+    }
+
+    /**
+     * Hitung berat volumetrik paket.
+     * Formula standar industri: (P × L × T) / 5000  → satuan kg
+     */
+    private function calcVolumetricWeight(Package $package): float
+    {
+        $l = (float) ($package->length ?? 0);
+        $w = (float) ($package->width  ?? 0);
+        $h = (float) ($package->height ?? 0);
+
+        return round(($l * $w * $h) / 5000, 2);
+    }
+
+    /**
+     * Berat efektif = max(berat_asli, berat_volumetrik).
+     * Inilah berat yang dipakai untuk cek muat kapasitas kendaraan.
+     */
+    private function calcEffectiveWeight(Package $package): float
+    {
+        $actual     = (float) ($package->weight ?? 0);
+        $volumetric = $this->calcVolumetricWeight($package);
+
+        return max($actual, $volumetric);
     }
 }

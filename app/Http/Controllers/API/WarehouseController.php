@@ -7,6 +7,7 @@ use App\Http\Requests\StoreWarehouseRequest;
 use App\Http\Requests\UpdateWarehouseRequest;
 use App\Models\Hub;
 use App\Models\Warehouse;
+use App\Services\CacheService;
 use Illuminate\Support\Facades\Log;
 
 class WarehouseController extends Controller
@@ -43,10 +44,31 @@ class WarehouseController extends Controller
             $payload = $request->validated();
             $payload['current_load'] = $payload['current_load'] ?? 0;
 
+            // Use status provided from client, fallback to calculated status based on capacity & current_load
+            if (!isset($payload['status'])) {
+                $capacity = (int) ($payload['capacity'] ?? 0);
+                $currentLoad = (int) ($payload['current_load'] ?? 0);
+                $percentage = $capacity > 0 ? ($currentLoad / $capacity) * 100 : 0;
+                
+                $status = 'available';
+                if ($percentage >= 100) {
+                    $status = 'overload';
+                } elseif ($percentage >= 90) {
+                    $status = 'full';
+                }
+                $payload['status'] = $status;
+            }
+
             $warehouse = Warehouse::create($payload);
 
             $this->applyHubLoadChange($warehouse->hub_id, (int) $warehouse->current_load);
             $warehouse->load(['packages', 'hub']);
+
+            // Invalidate frontend cache so UI updates instantly
+            CacheService::flushTag(CacheService::TAG_WAREHOUSE);
+            // Fallback for environments without Redis (like file cache driver)
+            CacheService::forget(CacheService::keyWarehouseStats());
+            CacheService::forget(CacheService::keyWarehouseList());
 
             return response()->json([
                 'success' => true,
@@ -121,7 +143,28 @@ class WarehouseController extends Controller
             $oldHubId = $warehouse->hub_id;
             $oldCurrentLoad = (int) $warehouse->current_load;
 
-            $warehouse->update($request->validated());
+            $payload = $request->validated();
+            
+            // Use status from payload if present, else recalculate or keep existing
+            if (!isset($payload['status'])) {
+                if (isset($payload['capacity']) || isset($payload['current_load'])) {
+                    $capacity = (int) ($payload['capacity'] ?? $warehouse->capacity ?? 0);
+                    $currentLoad = (int) ($payload['current_load'] ?? $warehouse->current_load ?? 0);
+                    $percentage = $capacity > 0 ? ($currentLoad / $capacity) * 100 : 0;
+                    
+                    $status = 'available';
+                    if ($percentage >= 100) {
+                        $status = 'overload';
+                    } elseif ($percentage >= 90) {
+                        $status = 'full';
+                    }
+                    $payload['status'] = $status;
+                } else {
+                    $payload['status'] = $warehouse->status;
+                }
+            }
+
+            $warehouse->update($payload);
             
             // Refresh warehouse data
             $warehouse->refresh();
@@ -136,6 +179,12 @@ class WarehouseController extends Controller
                 $this->applyHubLoadChange($oldHubId, -$oldCurrentLoad);
                 $this->applyHubLoadChange($newHubId, $newCurrentLoad);
             }
+
+            // Invalidate frontend cache so UI updates instantly
+            CacheService::flushTag(CacheService::TAG_WAREHOUSE);
+            // Fallback for environments without Redis (like file cache driver)
+            CacheService::forget(CacheService::keyWarehouseStats());
+            CacheService::forget(CacheService::keyWarehouseList());
             
             // Convert to array for response
             $warehouseData = $warehouse->toArray();
@@ -197,6 +246,12 @@ class WarehouseController extends Controller
 
             $warehouse->delete();
             $this->applyHubLoadChange($hubId, -$currentLoad);
+
+            // Invalidate frontend cache so UI updates instantly
+            CacheService::flushTag(CacheService::TAG_WAREHOUSE);
+            // Fallback for environments without Redis (like file cache driver)
+            CacheService::forget(CacheService::keyWarehouseStats());
+            CacheService::forget(CacheService::keyWarehouseList());
 
             return response()->json([
                 'success' => true,

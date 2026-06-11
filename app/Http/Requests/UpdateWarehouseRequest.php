@@ -22,12 +22,11 @@ class UpdateWarehouseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'warehouse_code' => 'nullable|string|unique:warehouses,warehouse_code,' . $this->route('id') . '|max:50',
             'warehouse_name' => 'nullable|string|max:100',
             'location' => 'nullable|string|max:255',
             'capacity' => 'nullable|integer|min:1',
             'current_load' => 'nullable|integer|min:0',
-            'status' => 'nullable|in:active,inactive',
+            'status' => 'nullable|in:available,full,overload',
             'hub_id' => 'nullable|exists:hubs,id',
         ];
     }
@@ -38,7 +37,6 @@ class UpdateWarehouseRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'warehouse_code.unique' => 'Kode gudang sudah terdaftar',
             'capacity.integer' => 'Kapasitas harus berupa angka',
             'capacity.min' => 'Kapasitas minimal 1 unit',
             'current_load.integer' => 'Beban saat ini harus berupa angka',

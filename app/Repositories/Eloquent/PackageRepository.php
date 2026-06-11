@@ -17,11 +17,14 @@ class PackageRepository implements PackageRepositoryInterface
         }
 
         if (isset($filters['category'])) {
-            $packages = $query->get();
-            $packages = $packages->filter(function ($package) use ($filters) {
-                return $package->getDimensionCategory() === $filters['category'];
-            });
-            return $packages;
+            $category = $filters['category'];
+            if ($category === 'small') {
+                $query->where('volume', '<=', 1000);
+            } elseif ($category === 'medium') {
+                $query->where('volume', '>', 1000)->where('volume', '<=', 5000);
+            } elseif ($category === 'large') {
+                $query->where('volume', '>', 5000);
+            }
         }
 
         if (isset($filters['status'])) {
@@ -38,6 +41,32 @@ class PackageRepository implements PackageRepositoryInterface
         }
 
         return $query->get();
+    }
+
+    public function getAllPackagesPaginated($filters = [], $perPage = 15)
+    {
+        $query = Package::with(['warehouse.hub', 'hub', 'fleet', 'latestLog'])->orderByDesc('created_at');
+
+        if (isset($filters['warehouse_id'])) {
+            $query->where('warehouse_id', $filters['warehouse_id']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('package_status', $filters['status']);
+        }
+
+        if (isset($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('tracking_number', 'like', "%{$search}%")
+                  ->orWhere('sender_name', 'like', "%{$search}%")
+                  ->orWhere('receiver_name', 'like', "%{$search}%")
+                  ->orWhere('origin', 'like', "%{$search}%")
+                  ->orWhere('destination', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function getPackageById($id)
@@ -123,31 +152,34 @@ class PackageRepository implements PackageRepositoryInterface
 
     public function getStatistics()
     {
-        $packages = Package::with('warehouse')->get();
+        $stats = Package::query()
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN volume <= 1000 THEN 1 ELSE 0 END) as small,
+                SUM(CASE WHEN volume > 1000 AND volume <= 5000 THEN 1 ELSE 0 END) as medium,
+                SUM(CASE WHEN volume > 5000 THEN 1 ELSE 0 END) as large
+            ")
+            ->first();
 
-        $totalPackages = $packages->count();
-        $smallPackages = $packages->filter(function ($p) {
-            return $p->getDimensionCategory() === 'small';
-        })->count();
-        $mediumPackages = $packages->filter(function ($p) {
-            return $p->getDimensionCategory() === 'medium';
-        })->count();
-        $largePackages = $packages->filter(function ($p) {
-            return $p->getDimensionCategory() === 'large';
-        })->count();
+        $byWarehouse = Package::query()
+            ->leftJoin('warehouses', 'packages.warehouse_id', '=', 'warehouses.id')
+            ->selectRaw('packages.warehouse_id, warehouses.warehouse_name, COUNT(*) as count')
+            ->groupBy('packages.warehouse_id', 'warehouses.warehouse_name')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'warehouse_id' => $row->warehouse_id !== null ? (int) $row->warehouse_id : null,
+                    'warehouse_name' => $row->warehouse_name ?? 'N/A',
+                    'count' => (int) $row->count,
+                ];
+            });
 
         return [
-            'total_packages' => $totalPackages,
-            'small_packages' => $smallPackages,
-            'medium_packages' => $mediumPackages,
-            'large_packages' => $largePackages,
-            'by_warehouse' => $packages->groupBy('warehouse_id')->map(function ($group) {
-                return [
-                    'warehouse_id' => $group->first()->warehouse_id,
-                    'warehouse_name' => $group->first()->warehouse->warehouse_name ?? 'N/A',
-                    'count' => $group->count(),
-                ];
-            })->values(),
+            'total_packages' => (int) ($stats->total ?? 0),
+            'small_packages' => (int) ($stats->small ?? 0),
+            'medium_packages' => (int) ($stats->medium ?? 0),
+            'large_packages' => (int) ($stats->large ?? 0),
+            'by_warehouse' => $byWarehouse,
         ];
     }
 
@@ -177,18 +209,58 @@ class PackageRepository implements PackageRepositoryInterface
 
     public function getPackagesByCategory()
     {
-        $packages = Package::with('warehouse')->get();
-
         return [
-            'small' => $packages->filter(function ($p) {
-                return $p->getDimensionCategory() === 'small';
-            })->values(),
-            'medium' => $packages->filter(function ($p) {
-                return $p->getDimensionCategory() === 'medium';
-            })->values(),
-            'large' => $packages->filter(function ($p) {
-                return $p->getDimensionCategory() === 'large';
-            })->values(),
+            'small' => Package::with('warehouse')->where('volume', '<=', 1000)->get(),
+            'medium' => Package::with('warehouse')->where('volume', '>', 1000)->where('volume', '<=', 5000)->get(),
+            'large' => Package::with('warehouse')->where('volume', '>', 5000)->get(),
         ];
+    }
+
+    public function findPackageByTrackingNumber(string $trackingNumber)
+    {
+        $cacheKey = \App\Services\CacheService::keyShipmentByTracking($trackingNumber);
+
+        return \App\Services\CacheService::remember(
+            $cacheKey,
+            fn () => Package::with(['warehouse.hub', 'hub', 'fleet', 'histories.hub', 'histories.fleet', 'latestLog'])
+                ->where('tracking_number', $trackingNumber)
+                ->firstOrFail(),
+            \App\Services\CacheService::TTL_SHORT,
+            [\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE]
+        );
+    }
+
+    public function updatePackageStatus(string $trackingNumber, array $data)
+    {
+        $package = Package::where('tracking_number', $trackingNumber)->firstOrFail();
+
+        $updateData = [];
+        if (isset($data['status'])) {
+            $updateData['package_status'] = $data['status'];
+        }
+        if (array_key_exists('hub_id', $data)) {
+            $updateData['hub_id'] = $data['hub_id'];
+        }
+        if (array_key_exists('fleet_id', $data)) {
+            $updateData['fleet_id'] = $data['fleet_id'];
+        }
+
+        $package->update($updateData);
+
+        // Catat riwayat di tabel package_histories
+        \App\Models\PackageHistory::create([
+            'package_id'  => $package->id,
+            'status'      => $data['status'] ?? $package->package_status,
+            'hub_id'      => array_key_exists('hub_id', $data) ? $data['hub_id'] : $package->hub_id,
+            'fleet_id'    => array_key_exists('fleet_id', $data) ? $data['fleet_id'] : $package->fleet_id,
+            'notes'       => $data['notes'] ?? null,
+            'recorded_at' => $data['recorded_at'] ?? now(),
+        ]);
+
+        // Invalidasi cache
+        \App\Services\CacheService::forget(\App\Services\CacheService::keyShipmentByTracking($trackingNumber));
+        \App\Services\CacheService::flushTag(\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE);
+
+        return $package->fresh(['warehouse.hub', 'hub', 'fleet', 'histories.hub', 'histories.fleet']);
     }
 }

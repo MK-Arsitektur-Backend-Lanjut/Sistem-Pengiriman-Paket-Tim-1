@@ -21,3 +21,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+*.postman_collection.json
+*.postman_environment.json
+/docs/*.postman_collection.json

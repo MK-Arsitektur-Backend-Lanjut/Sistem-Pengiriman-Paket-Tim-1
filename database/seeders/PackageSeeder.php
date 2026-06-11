@@ -10,15 +10,20 @@ use Illuminate\Support\Facades\DB;
 class PackageSeeder extends Seeder
 {
     /**
-     * Seed 100 packages distributed across existing warehouses.
+     * Seed 1.000 packages distributed across existing warehouses.
+     *
+     * Dinaikkan dari 100 ke 1.000 agar ShipmentLogSeeder bisa
+     * menghasilkan minimal 25.000 log tracking (rata-rata 25 log/paket).
      *
      * After inserting all packages, warehouse current_load and status
      * are recalculated automatically via Warehouse::recalculateLoad().
      */
     public function run(): void
     {
-        // Fetch warehouse IDs that exist in the database
         $warehouseIds = Warehouse::pluck('id')->toArray();
+        $warehouses   = Warehouse::all()->keyBy('id');
+        $hubIds       = DB::table('hubs')->pluck('id')->toArray();
+        $fleetIds     = DB::table('fleets')->pluck('id')->toArray();
 
         if (empty($warehouseIds)) {
             $this->command->warn('No warehouses found. Run WarehouseSeeder first.');
@@ -31,6 +36,7 @@ class PackageSeeder extends Seeder
             'Grab Express', 'SiCepat Ekspres', 'JNE Logistics',
             'PT TIKI', 'Anteraja', 'Wahana Express', 'Ninja Xpress',
             'PT Pos Indonesia', 'Lion Parcel', 'RPX Holding',
+            'J&T Express', 'SAP Express', 'Paxel',
         ];
 
         $receivers = [
@@ -39,6 +45,9 @@ class PackageSeeder extends Seeder
             'Hendra Gunawan', 'Indah Permata', 'Joko Widodo', 'Kartini Sari',
             'Luki Hakim', 'Maya Putri', 'Nanang Suryadi', 'Olivia Tan',
             'Putra Alamsyah', 'Qonita Azzahra', 'Rendra Kusuma', 'Sari Dewi',
+            'Toni Hartono', 'Umi Kalsum', 'Vira Septiani', 'Wira Kusuma',
+            'Xena Maharani', 'Yoga Pranata', 'Zahra Amelia', 'Arif Budiman',
+            'Bintang Ramadhan', 'Citra Ningrum',
         ];
 
         $cities = [
@@ -46,53 +55,49 @@ class PackageSeeder extends Seeder
             'Palembang', 'Semarang', 'Yogyakarta', 'Denpasar', 'Pontianak',
             'Banjarmasin', 'Balikpapan', 'Samarinda', 'Pekanbaru', 'Padang',
             'Manado', 'Kupang', 'Jayapura', 'Mataram', 'Ambon',
+            'Batam', 'Jambi', 'Bengkulu', 'Lampung', 'Cirebon',
+            'Bogor', 'Malang', 'Solo', 'Tasikmalaya', 'Kediri',
         ];
 
-        $statuses = ['registered', 'registered', 'registered', 'shipped', 'delivered'];
-
-        // Predefined 100 packages with realistic varied dimensions
-        // – Small  : volume ≤ 1000 cm³  (target ~30 packages)
-        // – Medium : volume 1001–5000    (target ~40 packages)
-        // – Large  : volume > 5000       (target ~30 packages)
-        $dimensionSets = [
-            // Small (30)
-            [10, 10, 8],   [12, 8, 10],  [15, 10, 6],  [8, 8, 12],   [10, 10, 10],
-            [20, 10, 5],   [12, 12, 6],  [15, 8, 8],   [10, 8, 12],  [18, 10, 5],
-            [9, 9, 9],     [14, 10, 7],  [16, 8, 7],   [11, 10, 9],  [13, 9, 8],
-            [20, 7, 7],    [10, 10, 9],  [12, 10, 8],  [15, 9, 7],   [8, 8, 15],
-            [10, 10, 7],   [12, 8, 9],   [14, 8, 8],   [9, 9, 12],   [11, 9, 9],
-            [16, 9, 6],    [10, 10, 8],  [13, 10, 7],  [15, 8, 8],   [11, 11, 8],
-            // Medium (40)
-            [20, 15, 10],  [25, 20, 8],  [30, 15, 10], [25, 15, 12], [20, 20, 10],
-            [35, 15, 8],   [30, 20, 8],  [25, 18, 10], [22, 18, 12], [30, 18, 8],
-            [28, 18, 10],  [24, 20, 10], [30, 16, 10], [26, 18, 10], [32, 15, 10],
-            [20, 20, 12],  [28, 16, 10], [25, 20, 9],  [30, 14, 10], [22, 20, 10],
-            [35, 14, 8],   [28, 20, 8],  [26, 20, 9],  [32, 16, 9],  [24, 18, 11],
-            [30, 18, 9],   [28, 18, 9],  [25, 18, 11], [22, 20, 11], [30, 16, 9],
-            [26, 16, 10],  [24, 18, 11], [28, 14, 11], [25, 16, 12], [22, 18, 11],
-            [30, 14, 11],  [26, 18, 10], [24, 20, 10], [28, 16, 11], [25, 18, 10],
-            // Large (30)
-            [50, 40, 30],  [60, 40, 25], [50, 45, 30], [55, 40, 30], [60, 45, 25],
-            [70, 50, 20],  [50, 50, 30], [60, 50, 25], [55, 45, 28], [65, 40, 28],
-            [70, 40, 25],  [50, 50, 25], [60, 45, 28], [55, 50, 25], [65, 45, 25],
-            [70, 50, 22],  [50, 45, 35], [60, 50, 22], [55, 45, 30], [65, 50, 22],
-            [80, 50, 20],  [50, 40, 35], [60, 40, 30], [55, 40, 32], [65, 40, 30],
-            [70, 45, 25],  [50, 50, 28], [60, 50, 26], [55, 50, 28], [65, 45, 28],
-        ];
+        // Disable FK checks to safely truncate and insert
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('packages')->truncate();
+        DB::table('package_histories')->truncate();
 
         $packages = [];
-        $now = now();
+        $histories = [];
+        $now      = now();
+        $total    = 25000;
+        $batchSize = 1000;
 
-        for ($i = 1; $i <= 100; $i++) {
-            $dim    = $dimensionSets[$i - 1];
-            $length = $dim[0];
-            $width  = $dim[1];
-            $height = $dim[2];
+        for ($i = 1; $i <= $total; $i++) {
+            [$length, $width, $height] = $this->randomDimension();
             $volume = $length * $width * $height;
             $weight = round(($volume / 5000) * 10 + rand(1, 5) + rand(0, 9) / 10, 2);
 
+            $statuses = ['registered', 'picked_up', 'in_transit', 'arrived_at_hub', 'out_for_delivery', 'delivered', 'failed', 'returned'];
+            $status = $statuses[array_rand($statuses)];
+
+            $warehouseId = $warehouseIds[($i - 1) % count($warehouseIds)];
+            $warehouse = $warehouses[$warehouseId] ?? null;
+            $originHubId = $warehouse ? $warehouse->hub_id : null;
+
+            $hubId = null;
+            $fleetId = null;
+
+            if ($status === 'registered') {
+                $hubId = $originHubId;
+            } elseif (in_array($status, ['picked_up', 'in_transit', 'out_for_delivery'])) {
+                $fleetId = !empty($fleetIds) ? $fleetIds[array_rand($fleetIds)] : null;
+                $hubId = $originHubId;
+            } elseif ($status === 'arrived_at_hub') {
+                $hubId = !empty($hubIds) ? $hubIds[array_rand($hubIds)] : null;
+            }
+
+            $createdAt = now()->subDays(rand(7, 90));
+
             $packages[] = [
-                'tracking_number' => 'PKG-2026-' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                'tracking_number' => 'PKG-2026-' . str_pad($i, 6, '0', STR_PAD_LEFT),
                 'sender_name'     => $senders[array_rand($senders)],
                 'receiver_name'   => $receivers[array_rand($receivers)],
                 'origin'          => $cities[array_rand($cities)],
@@ -102,26 +107,152 @@ class PackageSeeder extends Seeder
                 'width'           => $width,
                 'height'          => $height,
                 'volume'          => $volume,
-                'warehouse_id'    => $warehouseIds[($i - 1) % count($warehouseIds)],
-                'package_status'  => $statuses[array_rand($statuses)],
-                'created_at'      => $now,
+                'warehouse_id'    => $warehouseId,
+                'hub_id'          => $hubId,
+                'fleet_id'        => $fleetId,
+                'package_status'  => $status,
+                'created_at'      => $createdAt,
                 'updated_at'      => $now,
             ];
+
+            // Generate sequence of logs leading to final status
+            $sequence = [];
+            switch ($status) {
+                case 'registered':
+                    $sequence = ['registered'];
+                    break;
+                case 'picked_up':
+                    $sequence = ['registered', 'picked_up'];
+                    break;
+                case 'in_transit':
+                    $sequence = ['registered', 'picked_up', 'in_transit'];
+                    break;
+                case 'arrived_at_hub':
+                    $sequence = ['registered', 'picked_up', 'in_transit', 'arrived_at_hub'];
+                    break;
+                case 'out_for_delivery':
+                    $sequence = ['registered', 'picked_up', 'in_transit', 'arrived_at_hub', 'out_for_delivery'];
+                    break;
+                case 'delivered':
+                    $sequence = ['registered', 'picked_up', 'in_transit', 'arrived_at_hub', 'out_for_delivery', 'delivered'];
+                    break;
+                case 'failed':
+                    $sequence = ['registered', 'picked_up', 'in_transit', 'arrived_at_hub', 'out_for_delivery', 'failed'];
+                    break;
+                case 'returned':
+                    $sequence = ['registered', 'picked_up', 'in_transit', 'arrived_at_hub', 'out_for_delivery', 'failed', 'returned'];
+                    break;
+            }
+
+            $currentTime = clone $createdAt;
+            foreach ($sequence as $stepIndex => $stepStatus) {
+                if ($stepIndex > 0) {
+                    $currentTime->addHours(rand(2, 12));
+                }
+
+                $stepHubId = null;
+                $stepFleetId = null;
+                $stepNotes = '';
+
+                switch ($stepStatus) {
+                    case 'registered':
+                        $stepHubId = $originHubId;
+                        $stepNotes = 'Paket terdaftar di sistem pengiriman.';
+                        break;
+                    case 'picked_up':
+                        $stepFleetId = !empty($fleetIds) ? $fleetIds[array_rand($fleetIds)] : null;
+                        $stepNotes = 'Paket telah dijemput oleh armada.';
+                        break;
+                    case 'in_transit':
+                        $stepFleetId = !empty($fleetIds) ? $fleetIds[array_rand($fleetIds)] : null;
+                        $stepNotes = 'Paket sedang dalam perjalanan.';
+                        break;
+                    case 'arrived_at_hub':
+                        $stepHubId = !empty($hubIds) ? $hubIds[array_rand($hubIds)] : null;
+                        $stepNotes = 'Paket tiba di hub transit.';
+                        break;
+                    case 'out_for_delivery':
+                        $stepFleetId = !empty($fleetIds) ? $fleetIds[array_rand($fleetIds)] : null;
+                        $stepNotes = 'Paket sedang diantar ke alamat penerima.';
+                        break;
+                    case 'delivered':
+                        $stepNotes = 'Paket berhasil diterima oleh yang bersangkutan.';
+                        break;
+                    case 'failed':
+                        $stepNotes = 'Gagal mengirimkan paket. Penerima tidak berada di tempat.';
+                        break;
+                    case 'returned':
+                        $stepNotes = 'Paket dikembalikan ke pengirim.';
+                        break;
+                }
+
+                $histories[] = [
+                    'package_id'  => $i,
+                    'status'      => $stepStatus,
+                    'hub_id'      => $stepHubId,
+                    'fleet_id'    => $stepFleetId,
+                    'notes'       => $stepNotes,
+                    'recorded_at' => $currentTime->toDateTimeString(),
+                    'created_at'  => $currentTime->toDateTimeString(),
+                    'updated_at'  => $currentTime->toDateTimeString(),
+                ];
+            }
+
+            // Bulk insert setiap batchSize
+            if ($i % $batchSize === 0) {
+                DB::table('packages')->insert($packages);
+                DB::table('package_histories')->insert($histories);
+                $this->command->info("  ✓ {$i} packages and histories inserted...");
+                $packages = [];
+                $histories = [];
+            }
         }
 
-        // Bulk insert for performance
-        DB::table('packages')->insert($packages);
+        // Insert sisa
+        if (!empty($packages)) {
+            DB::table('packages')->insert($packages);
+        }
+        if (!empty($histories)) {
+            DB::table('package_histories')->insert($histories);
+        }
 
-        // Recalculate current_load and status for every warehouse
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Recalculate warehouse loads
         $this->command->info('Recalculating warehouse loads...');
         foreach (Warehouse::all() as $warehouse) {
             $warehouse->recalculateLoad();
         }
 
+        // Statistik
+        $small  = Package::where('volume', '<=', 1000)->count();
+        $medium = Package::whereBetween('volume', [1001, 5000])->count();
+        $large  = Package::where('volume', '>', 5000)->count();
+
         $this->command->info('✅ PackageSeeder completed!');
-        $this->command->line('📦 100 packages inserted');
-        $this->command->line('  - Small  (≤ 1,000 cm³): '  . Package::where('volume', '<=', 1000)->count());
-        $this->command->line('  - Medium (1,001–5,000 cm³): ' . Package::whereBetween('volume', [1001, 5000])->count());
-        $this->command->line('  - Large  (> 5,000 cm³): '  . Package::where('volume', '>', 5000)->count());
+        $this->command->line("📦 {$total} packages inserted");
+        $this->command->line("  - Small  (≤ 1.000 cm³) : {$small}");
+        $this->command->line("  - Medium (1.001–5.000)  : {$medium}");
+        $this->command->line("  - Large  (> 5.000 cm³)  : {$large}");
+    }
+
+    /**
+     * Generate dimensi paket secara random dengan distribusi realistis
+     * ~30% small, ~40% medium, ~30% large
+     */
+    private function randomDimension(): array
+    {
+        $type = rand(1, 100);
+
+        if ($type <= 30) {
+            // Small: volume ≤ 1.000 cm³
+            return [rand(8, 20), rand(8, 15), rand(5, 10)];
+        } elseif ($type <= 70) {
+            // Medium: volume 1.001–5.000 cm³
+            return [rand(20, 35), rand(15, 25), rand(8, 15)];
+        } else {
+            // Large: volume > 5.000 cm³
+            return [rand(40, 80), rand(30, 60), rand(20, 40)];
+        }
     }
 }

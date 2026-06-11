@@ -22,12 +22,11 @@ class StoreWarehouseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'warehouse_code' => 'required|string|unique:warehouses,warehouse_code|max:50',
             'warehouse_name' => 'required|string|max:100',
             'location' => 'required|string|max:255',
             'capacity' => 'required|integer|min:1',
             'current_load' => 'nullable|integer|min:0',
-            'status' => 'nullable|in:active,inactive',
+            'status' => 'nullable|in:available,full,overload',
             'hub_id' => 'nullable|exists:hubs,id',
         ];
     }
@@ -38,8 +37,6 @@ class StoreWarehouseRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'warehouse_code.required' => 'Kode gudang harus diisi',
-            'warehouse_code.unique' => 'Kode gudang sudah terdaftar',
             'warehouse_name.required' => 'Nama gudang harus diisi',
             'location.required' => 'Lokasi gudang harus diisi',
             'capacity.required' => 'Kapasitas gudang harus diisi',

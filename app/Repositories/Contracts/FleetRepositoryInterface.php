@@ -4,7 +4,7 @@ namespace App\Repositories\Contracts;
 
 interface FleetRepositoryInterface
 {
-    public function getAllFleets($search = null);
+    public function getAllFleets($search = null, $status = null, $hubId = null);
     public function getFleetById($id);
     public function getMissingPackageIds(array $packageIds): array;
     public function calculateTransitDuration($fleetId);

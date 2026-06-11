@@ -16,7 +16,6 @@ class Module1Seeder extends Seeder
         // Create Warehouses (10 warehouses)
         $warehouses = [
             [
-                'warehouse_code' => 'WH-001',
                 'warehouse_name' => 'Jakarta Central Hub',
                 'location' => 'Jakarta Pusat',
                 'capacity' => 10000,
@@ -24,7 +23,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-002',
                 'warehouse_name' => 'Surabaya Distribution',
                 'location' => 'Surabaya, Jawa Timur',
                 'capacity' => 8000,
@@ -32,7 +30,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-003',
                 'warehouse_name' => 'Bandung Depot',
                 'location' => 'Bandung, Jawa Barat',
                 'capacity' => 6000,
@@ -40,7 +37,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-004',
                 'warehouse_name' => 'Medan Logistics',
                 'location' => 'Medan, Sumatera Utara',
                 'capacity' => 5000,
@@ -48,7 +44,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-005',
                 'warehouse_name' => 'Makassar Port',
                 'location' => 'Makassar, Sulawesi Selatan',
                 'capacity' => 7000,
@@ -56,7 +51,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-006',
                 'warehouse_name' => 'Palembang Hub',
                 'location' => 'Palembang, Sumatera Selatan',
                 'capacity' => 4500,
@@ -64,7 +58,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-007',
                 'warehouse_name' => 'Semarang Center',
                 'location' => 'Semarang, Jawa Tengah',
                 'capacity' => 5500,
@@ -72,7 +65,6 @@ class Module1Seeder extends Seeder
                 'status' => 'inactive'
             ],
             [
-                'warehouse_code' => 'WH-008',
                 'warehouse_name' => 'Yogyakarta Station',
                 'location' => 'Yogyakarta, DIY',
                 'capacity' => 3500,
@@ -80,7 +72,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-009',
                 'warehouse_name' => 'Bali Gateway',
                 'location' => 'Denpasar, Bali',
                 'capacity' => 4000,
@@ -88,7 +79,6 @@ class Module1Seeder extends Seeder
                 'status' => 'active'
             ],
             [
-                'warehouse_code' => 'WH-010',
                 'warehouse_name' => 'Pontianak Node',
                 'location' => 'Pontianak, Kalimantan Barat',
                 'capacity' => 3000,
@@ -121,8 +111,7 @@ class Module1Seeder extends Seeder
                 ]
             );
 
-            // Remove warehouse_code and set correct status
-            unset($warehouse['warehouse_code']);
+            // Set correct status
             $warehouse['status'] = $warehouseStatus;  // Use calculated status based on percentage
             
             $createdWarehouses[] = Warehouse::updateOrCreate(

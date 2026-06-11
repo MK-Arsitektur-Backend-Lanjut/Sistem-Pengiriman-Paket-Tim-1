@@ -5,10 +5,19 @@ namespace App\Repositories\Eloquent;
 use App\Models\Hub;
 use App\Models\Warehouse;
 use App\Repositories\Contracts\HubRepositoryInterface;
+use App\Services\CacheService;
 
 class HubRepository implements HubRepositoryInterface
 {
     public function getAllHubs($search = null)
+    {
+        $key = CacheService::keyHubList($search ?? '');
+        return CacheService::remember($key, function () use ($search) {
+            return $this->fetchHubs($search);
+        }, CacheService::TTL_SHORT, [CacheService::TAG_HUB, CacheService::TAG_WAREHOUSE]);
+    }
+
+    private function fetchHubs(?string $search)
     {
         $query = Hub::query();
         if ($search) {
@@ -42,33 +51,36 @@ class HubRepository implements HubRepositoryInterface
 
     public function checkCapacity($hubId)
     {
-        $hub = Hub::findOrFail($hubId);
+        $key = 'hubs:capacity:' . $hubId;
+        return CacheService::remember($key, function () use ($hubId) {
+            $hub = Hub::findOrFail($hubId);
 
-        $warehouseTotals = Warehouse::query()
-            ->where('hub_id', $hubId)
-            ->selectRaw('SUM(current_load) as current_load, SUM(capacity) as capacity')
-            ->first();
-        
-        $warehouseLoad = (int) ($warehouseTotals->current_load ?? 0);
-        $warehouseCapacity = (int) ($warehouseTotals->capacity ?? 0);
-        
-        $percentage = ($warehouseCapacity > 0) ? ($warehouseLoad / $warehouseCapacity) * 100 : 0;
-        
-        // Return structured data for "monitoring kapasitas gudang"
-        $status = 'available';
-        if ($percentage >= 100) {
-            $status = 'overload';
-        } elseif ($percentage >= 90) {
-            $status = 'full';
-        }
+            $warehouseTotals = Warehouse::query()
+                ->where('hub_id', $hubId)
+                ->selectRaw('SUM(current_load) as current_load, SUM(capacity) as capacity')
+                ->first();
+            
+            $warehouseLoad = (int) ($warehouseTotals->current_load ?? 0);
+            $warehouseCapacity = (int) ($warehouseTotals->capacity ?? 0);
+            
+            $percentage = ($warehouseCapacity > 0) ? ($warehouseLoad / $warehouseCapacity) * 100 : 0;
+            
+            // Return structured data for "monitoring kapasitas gudang"
+            $status = 'available';
+            if ($percentage >= 100) {
+                $status = 'overload';
+            } elseif ($percentage >= 90) {
+                $status = 'full';
+            }
 
-        return [
-            'hub_id' => $hub->id,
-            'name' => $hub->name,
-            'capacity' => $hub->capacity,
-            'current_load' => $warehouseLoad,
-            'utilization_percentage' => round($percentage, 2) . '%',
-            'status' => $status
-        ];
+            return [
+                'hub_id' => $hub->id,
+                'name' => $hub->name,
+                'capacity' => $hub->capacity,
+                'current_load' => $warehouseLoad,
+                'utilization_percentage' => round($percentage, 2) . '%',
+                'status' => $status
+            ];
+        }, CacheService::TTL_SHORT, [CacheService::TAG_HUB, CacheService::TAG_WAREHOUSE]);
     }
 }

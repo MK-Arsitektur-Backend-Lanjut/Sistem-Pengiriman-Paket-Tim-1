@@ -12,7 +12,6 @@ class Warehouse extends Model
     protected $table = 'warehouses';
 
     protected $fillable = [
-        'warehouse_code',
         'warehouse_name',
         'location',
         'capacity',
@@ -42,5 +41,27 @@ class Warehouse extends Model
     public function hub()
     {
         return $this->belongsTo(Hub::class);
+    }
+
+    /**
+     * Recalculate current_load and update status based on package count.
+     * Called after bulk package inserts (seeder).
+     */
+    public function recalculateLoad(): void
+    {
+        $count      = $this->packages()->count();
+        $percentage = $this->capacity > 0 ? ($count / $this->capacity) * 100 : 0;
+
+        $status = 'available';
+        if ($percentage >= 100) {
+            $status = 'overload';
+        } elseif ($percentage >= 90) {
+            $status = 'full';
+        }
+
+        $this->update([
+            'current_load' => $count,
+            'status'       => $status,
+        ]);
     }
 }

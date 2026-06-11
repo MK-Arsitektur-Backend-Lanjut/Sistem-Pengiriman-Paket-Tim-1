@@ -12,9 +12,13 @@ class FleetController extends Controller
 {
     public function __construct(protected FleetRepositoryInterface $fleetRepo) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return $this->successResponse($this->fleetRepo->getAllFleets());
+        return $this->successResponse($this->fleetRepo->getAllFleets(
+            $request->query('search'),
+            $request->query('status'),
+            $request->query('hub_id')
+        ));
     }
 
     public function show(int $id): JsonResponse

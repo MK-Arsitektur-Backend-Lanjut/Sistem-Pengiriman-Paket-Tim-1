@@ -26,6 +26,14 @@ class Hub extends Model
     }
 
     /**
+     * Paket-paket yang ditujukan ke hub ini (Modul 2).
+     */
+    public function packages()
+    {
+        return $this->hasMany(Package::class, 'hub_id');
+    }
+
+    /**
      * Gudang-gudang fisik yang berada di bawah hub ini (Modul 1 ↔ Modul 4).
      * Integrasi: paket masuk gudang → current_load hub bertambah.
      */

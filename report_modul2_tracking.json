@@ -1,0 +1,138 @@
+{
+    "metrics": {
+        "http_req_waiting": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "iteration_duration": {
+            "min": 1002.689028,
+            "med": 1004.626587,
+            "max": 1056.294124,
+            "p(90)": 1010.4354578,
+            "p(95)": 1014.9802338,
+            "avg": 1006.5028819646024
+        },
+        "group_duration": {
+            "avg": 5.4370709473684204,
+            "min": 2.321669,
+            "med": 3.796573,
+            "max": 55.380281,
+            "p(90)": 7.8214606,
+            "p(95)": 10.874470799999976
+        },
+        "http_req_failed": {
+            "passes": 133,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "data_received": {
+            "count": 0,
+            "rate": 0
+        },
+        "vus": {
+            "value": 19,
+            "min": 0,
+            "max": 19
+        },
+        "http_req_sending": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "iterations": {
+            "count": 113,
+            "rate": 9.405748556826016
+        },
+        "http_req_duration": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "thresholds": {
+                "p(95)<500": false
+            }
+        },
+        "data_sent": {
+            "count": 0,
+            "rate": 0
+        },
+        "vus_max": {
+            "value": 20000,
+            "min": 6177,
+            "max": 20000
+        },
+        "http_reqs": {
+            "count": 133,
+            "rate": 11.070482814671328
+        },
+        "checks": {
+            "passes": 0,
+            "fails": 133,
+            "value": 0
+        },
+        "http_req_blocked": {
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0
+        },
+        "http_req_connecting": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_receiving": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        }
+    },
+    "root_group": {
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "Modul 2: Tracking System": {
+                "path": "::Modul 2: Tracking System",
+                "id": "38af5be788b6b1c5f020c1e8922ff703",
+                "groups": {},
+                "checks": {
+                        "Get Tracking status is 200": {
+                            "passes": 0,
+                            "fails": 133,
+                            "name": "Get Tracking status is 200",
+                            "path": "::Modul 2: Tracking System::Get Tracking status is 200",
+                            "id": "549f0b491b75425508aa7682d4bf774a"
+                        }
+                    },
+                "name": "Modul 2: Tracking System"
+            }
+        },
+        "checks": {},
+        "name": "",
+        "path": ""
+    }
+}

@@ -8,6 +8,7 @@ use App\Http\Controllers\Module1MonitoringController;
 use App\Http\Controllers\WarehouseWebController;
 use App\Http\Controllers\FleetWebController;
 use App\Http\Controllers\TrackingWebController;
+use App\Http\Controllers\DashboardController;
 
 // ── Module 3: Autentikasi JWT (Dedicated Login & Register Pages) ──
 Route::get('/auth/login',    fn() => view('auth.login'))->name('auth.login');
@@ -15,9 +16,7 @@ Route::get('/auth/register', fn() => view('auth.register'))->name('auth.register
 Route::get('/auth/profile',  fn() => view('auth.profile'))->name('auth.profile');
 
 // ── Homepage Utama ──
-Route::get('/', function () {
-    return view('pages.home.index');
-})->name('home');
+Route::get('/', [DashboardController::class, 'index'])->name('home');
 
 Route::get('/home', function () {
     return redirect()->route('home');

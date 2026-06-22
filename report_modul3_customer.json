@@ -1,0 +1,153 @@
+{
+    "metrics": {
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 1020,
+            "value": 0
+        },
+        "http_reqs": {
+            "count": 1020,
+            "rate": 5.603070015344833
+        },
+        "group_duration": {
+            "p(95)": 54200.418436,
+            "avg": 40035.86082024706,
+            "min": 16936.737033,
+            "med": 40180.628939,
+            "max": 55699.752277,
+            "p(90)": 53265.3240814
+        },
+        "iteration_duration": {
+            "p(90)": 54265.9733662,
+            "p(95)": 55200.9407448,
+            "avg": 41036.7187012941,
+            "min": 17937.040905,
+            "med": 41181.733466,
+            "max": 56700.702233
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 10931.267698197056,
+            "min": 2423.298665,
+            "med": 9653.1589525,
+            "max": 24459.308063,
+            "p(90)": 15935.551230100002,
+            "p(95)": 21367.610826999997
+        },
+        "data_sent": {
+            "count": 437580,
+            "rate": 2403.7170365829334
+        },
+        "http_req_tls_handshaking": {
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0
+        },
+        "http_req_waiting": {
+            "max": 24456.393335,
+            "p(90)": 15933.0010382,
+            "p(95)": 21364.615262,
+            "avg": 10927.060453523532,
+            "min": 2409.443174,
+            "med": 9651.283434
+        },
+        "http_req_duration": {
+            "p(95)": 21367.610826999997,
+            "avg": 10931.267698197056,
+            "min": 2423.298665,
+            "med": 9653.1589525,
+            "max": 24459.308063,
+            "p(90)": 15935.551230100002,
+            "thresholds": {
+                "p(95)<30000": false
+            }
+        },
+        "vus": {
+            "max": 99,
+            "value": 10,
+            "min": 1
+        },
+        "http_req_blocked": {
+            "avg": 0.7318760225490192,
+            "min": 0.312768,
+            "med": 0.6707645,
+            "max": 21.170986,
+            "p(90)": 0.9250566000000001,
+            "p(95)": 1.0332479999999997
+        },
+        "http_req_receiving": {
+            "avg": 4.043541883333335,
+            "min": 0.406541,
+            "med": 2.2843774999999997,
+            "max": 30.938367,
+            "p(90)": 10.0882717,
+            "p(95)": 12.077701049999998
+        },
+        "http_req_sending": {
+            "max": 1.092485,
+            "p(90)": 0.24131560000000005,
+            "p(95)": 0.28307334999999995,
+            "avg": 0.1637027901960784,
+            "min": 0.041994,
+            "med": 0.1501105
+        },
+        "http_req_connecting": {
+            "max": 21.01008,
+            "p(90)": 0.6772830000000001,
+            "p(95)": 0.7714156999999998,
+            "avg": 0.5385388147058827,
+            "min": 0.248293,
+            "med": 0.486347
+        },
+        "data_received": {
+            "rate": 44733.510235009315,
+            "count": 8143425
+        },
+        "checks": {
+            "passes": 510,
+            "fails": 0,
+            "value": 1
+        },
+        "iterations": {
+            "count": 255,
+            "rate": 1.4007675038362082
+        },
+        "vus_max": {
+            "min": 100,
+            "max": 100,
+            "value": 100
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "Modul 3: Autentikasi & Customer Features": {
+                "path": "::Modul 3: Autentikasi & Customer Features",
+                "id": "030440e494def8be084598b054783ba1",
+                "groups": {},
+                "checks": {
+                        "Get Shipping Profile status is 200": {
+                            "id": "376329f33485b71236180d187ddfafd7",
+                            "passes": 255,
+                            "fails": 0,
+                            "name": "Get Shipping Profile status is 200",
+                            "path": "::Modul 3: Autentikasi & Customer Features::Get Shipping Profile status is 200"
+                        },
+                        "Calculate Shipping Cost status is 200": {
+                            "name": "Calculate Shipping Cost status is 200",
+                            "path": "::Modul 3: Autentikasi & Customer Features::Calculate Shipping Cost status is 200",
+                            "id": "c81971eed989501a6dc8b781c96577d5",
+                            "passes": 255,
+                            "fails": 0
+                        }
+                    },
+                "name": "Modul 3: Autentikasi & Customer Features"
+            }
+        },
+        "checks": {}
+    }
+}

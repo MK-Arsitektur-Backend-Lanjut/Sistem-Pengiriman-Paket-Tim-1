@@ -5,15 +5,16 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class ShippingProfileController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
         $user = auth('api')->user();
-        $profiles = $this->readProfiles();
-        $profile = $profiles[(string) $user->id] ?? null;
+        
+        // Mengambil profil dari Redis (Cache)
+        $profile = Cache::get('shipping_profile_' . $user->id);
 
         return response()->json([
             'message' => 'Profil pengiriman pelanggan.',
@@ -35,24 +36,13 @@ class ShippingProfileController extends Controller
         ]);
 
         $user = auth('api')->user();
-        $profiles = $this->readProfiles();
-        $profiles[(string) $user->id] = $payload;
-        Storage::disk('local')->put('module3/shipping_profiles.json', json_encode($profiles, JSON_PRETTY_PRINT));
+        
+        // Menyimpan profil langsung ke Redis (Cache) tanpa batas waktu
+        Cache::forever('shipping_profile_' . $user->id, $payload);
 
         return response()->json([
             'message' => 'Profil pengiriman berhasil disimpan.',
             'data' => $payload,
         ]);
-    }
-
-    private function readProfiles(): array
-    {
-        if (!Storage::disk('local')->exists('module3/shipping_profiles.json')) {
-            return [];
-        }
-
-        $decoded = json_decode((string) Storage::disk('local')->get('module3/shipping_profiles.json'), true);
-
-        return is_array($decoded) ? $decoded : [];
     }
 }

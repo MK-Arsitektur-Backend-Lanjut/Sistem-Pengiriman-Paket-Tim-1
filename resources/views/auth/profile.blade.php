@@ -43,9 +43,33 @@
                                 Belum ada alamat yang tersimpan.
                             </div>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Kota/Kecamatan</label>
+                            <div class="p-3 bg-light rounded-3" id="profileCity">
+                                -
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Bergabung Sejak</label>
+                            <div class="p-3 bg-light rounded-3" id="profileJoined">
+                                -
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Terakhir Login</label>
+                            <div class="p-3 bg-light rounded-3" id="profileLastLogin">
+                                -
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mt-5 d-grid">
+                    <div class="mt-5 d-grid gap-2">
+                        <button class="btn btn-outline-primary px-4 fw-bold" id="editProfileBtn" style="border-radius: 12px;">
+                            <i class="bi bi-pencil-square me-2"></i>Edit Profil
+                        </button>
+                        <button class="btn btn-outline-secondary px-4 fw-bold" id="changePasswordBtn" style="border-radius: 12px;">
+                            <i class="bi bi-key me-2"></i>Ubah Password
+                        </button>
                         <button class="btn btn-outline-danger px-4 fw-bold" id="logoutBtn" style="border-radius: 12px;">
                             <i class="bi bi-box-arrow-right me-2"></i>Logout
                         </button>
@@ -66,44 +90,117 @@
                     </div>
                     <p class="text-muted small mb-4">Informasi ini digunakan otomatis saat Anda menghitung ongkir atau membuat pengiriman baru.</p>
 
-                    <form id="profileForm" class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary">Sender Name</label>
-                            <input name="sender_name" class="form-control" required placeholder="Nama pengirim">
+                    <form id="profileForm">
+                        <!-- Informasi Pengirim -->
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-lines-fill me-2"></i>Informasi Pengirim</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Sender Name</label>
+                                <input name="sender_name" class="form-control" required placeholder="Nama pengirim">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Sender Phone</label>
+                                <input name="sender_phone" class="form-control" required placeholder="0812xxxx">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Sender Email</label>
+                                <input name="sender_email" type="email" class="form-control" placeholder="Email pengirim">
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary">Sender Phone</label>
-                            <input name="sender_phone" class="form-control" required placeholder="0812xxxx">
+
+                        <!-- Alamat Penjemputan -->
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-geo-alt-fill me-2"></i>Alamat Penjemputan</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-secondary">Pickup Address</label>
+                                <input name="default_pickup_address" class="form-control" required placeholder="Alamat lengkap penjemputan">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Province</label>
+                                <input name="province" class="form-control" placeholder="Provinsi">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Origin City</label>
+                                <input name="default_origin_city" class="form-control" required placeholder="Contoh: Jakarta Selatan">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">District (Kecamatan)</label>
+                                <input name="district" class="form-control" placeholder="Kecamatan">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Postal Code</label>
+                                <input name="default_origin_postal_code" class="form-control" required placeholder="12345">
+                            </div>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold text-secondary">Default Pickup Address</label>
-                            <input name="default_pickup_address" class="form-control" required placeholder="Alamat lengkap penjemputan">
+
+                        <!-- Preferensi Pengiriman -->
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-truck me-2"></i>Preferensi Pengiriman</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Preferred Service</label>
+                                <select name="preferred_service_type" class="form-select" required>
+                                    <option value="regular">Regular</option>
+                                    <option value="express">Express</option>
+                                    <option value="same_day">Same Day</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Pickup Time</label>
+                                <input name="pickup_time" type="time" class="form-control">
+                            </div>
+                            <div class="col-12 mt-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="insurance" id="insurance" value="1">
+                                    <label class="form-check-label fw-semibold text-secondary" for="insurance">Use Insurance</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_default" id="isDefault" value="1">
+                                    <label class="form-check-label fw-semibold text-secondary" for="isDefault">Set as Default Shipping Profile</label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary">Origin City</label>
-                            <input name="default_origin_city" class="form-control" required placeholder="Contoh: Jakarta Selatan">
+
+                        <!-- Informasi Paket -->
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Informasi Paket</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Package Type</label>
+                                <input name="preferred_package_type" class="form-control" placeholder="box / envelope / pallet">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary">Package Weight (kg)</label>
+                                <input name="package_weight" type="number" step="0.1" class="form-control" placeholder="0.0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Length (cm)</label>
+                                <input name="package_length" type="number" step="0.1" class="form-control" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Width (cm)</label>
+                                <input name="package_width" type="number" step="0.1" class="form-control" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary">Height (cm)</label>
+                                <input name="package_height" type="number" step="0.1" class="form-control" placeholder="0">
+                            </div>
+                            <div class="col-12 mt-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_fragile" id="isFragile" value="1">
+                                    <label class="form-check-label fw-semibold text-secondary" for="isFragile">Fragile Package (Barang Pecah Belah)</label>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary">Postal Code</label>
-                            <input name="default_origin_postal_code" class="form-control" required placeholder="12345">
+
+                        <!-- Catatan Tambahan -->
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-journal-text me-2"></i>Catatan Tambahan</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-secondary">Notes</label>
+                                <textarea name="notes" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary">Preferred Service</label>
-                            <select name="preferred_service_type" class="form-select" required>
-                                <option value="regular">Regular</option>
-                                <option value="express">Express</option>
-                                <option value="same_day">Same Day</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary">Package Type</label>
-                            <input name="preferred_package_type" class="form-control" placeholder="box / envelope / pallet">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold text-secondary">Notes</label>
-                            <textarea name="notes" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
-                        </div>
-                        <div class="col-12 d-grid mt-4">
+
+                        <div class="d-grid mt-4">
                             <button type="submit" class="btn btn-primary py-2 fw-bold" style="border-radius: 12px;">
                                 <i class="bi bi-save me-2"></i>Save Shipping Profile
                             </button>
@@ -165,6 +262,11 @@
 
     function formToObject(form) {
         const data = Object.fromEntries(new FormData(form).entries());
+        // Handle unchecked checkboxes
+        form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            if (!cb.checked) data[cb.name] = 0;
+            else data[cb.name] = cb.value;
+        });
         Object.keys(data).forEach((key) => { if (data[key] === '') data[key] = null; });
         return data;
     }
@@ -176,7 +278,13 @@
             const form = document.getElementById('profileForm');
             Object.keys(data).forEach((key) => {
                 const field = form.querySelector(`[name="${key}"]`);
-                if (field) field.value = data[key] ?? '';
+                if (field) {
+                    if (field.type === 'checkbox') {
+                        field.checked = !!data[key];
+                    } else {
+                        field.value = data[key] ?? '';
+                    }
+                }
             });
         } catch (error) {
             console.error('Failed to load shipping profile', error);
@@ -193,6 +301,10 @@
                 document.getElementById('profileEmail').textContent = user.email || '-';
                 document.getElementById('profilePhone').textContent = user.phone || '-';
                 document.getElementById('profileAddress').textContent = user.address || 'Belum ada alamat yang tersimpan.';
+                document.getElementById('profileCity').textContent = user.city || '-';
+                const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) : 'Baru bergabung';
+                document.getElementById('profileJoined').textContent = joinDate;
+                document.getElementById('profileLastLogin').textContent = 'Hari ini';
             } catch (e) {}
         }
 

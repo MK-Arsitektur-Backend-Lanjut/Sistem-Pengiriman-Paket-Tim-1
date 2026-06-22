@@ -612,4 +612,350 @@
         </div>
     </div>
 </section>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- SECTION: MONITORING DASHBOARD & ANALYTICS -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<section class="py-5">
+    <div class="container">
+        <div class="mb-5">
+            <div class="section-label">📊 Real-Time Analytics</div>
+            <h2 class="section-title">System Monitoring Dashboard</h2>
+            <p class="text-secondary mt-2" style="max-width: 620px; font-size: 0.925rem;">
+                Pantau performa sistem pengiriman paket secara real-time dengan data terintegrasi dari semua modul.
+            </p>
+        </div>
+
+        <!-- METRICS CARDS -->
+        <div class="row g-3 mb-5">
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="card-body text-white p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div style="font-size: 0.75rem; opacity: 0.9;">Total Gudang</div>
+                                <div style="font-size: 1.8rem; font-weight: 800;">{{ $metrics['total_warehouses'] }}</div>
+                            </div>
+                            <i class="bi bi-building" style="font-size: 2rem; opacity: 0.8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="card-body text-white p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div style="font-size: 0.75rem; opacity: 0.9;">Total Paket</div>
+                                <div style="font-size: 1.8rem; font-weight: 800;">{{ number_format($metrics['total_packages']) }}</div>
+                            </div>
+                            <i class="bi bi-box-seam" style="font-size: 2rem; opacity: 0.8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="card-body text-white p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div style="font-size: 0.75rem; opacity: 0.9;">Total Hub</div>
+                                <div style="font-size: 1.8rem; font-weight: 800;">{{ $metrics['total_hubs'] }}</div>
+                            </div>
+                            <i class="bi bi-geo-alt" style="font-size: 2rem; opacity: 0.8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="card-body text-white p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div style="font-size: 0.75rem; opacity: 0.9;">Total Armada</div>
+                                <div style="font-size: 1.8rem; font-weight: 800;">{{ $metrics['total_fleets'] }}</div>
+                            </div>
+                            <i class="bi bi-truck" style="font-size: 2rem; opacity: 0.8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS ROW 1 -->
+        <div class="row g-4 mb-4">
+            <!-- WAREHOUSE CAPACITY USAGE -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-2 text-warning"></i>Warehouse Capacity Usage</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <canvas id="warehouseChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PACKAGE CATEGORY DISTRIBUTION -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2 text-info"></i>Package Category Distribution</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <canvas id="categoryChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS ROW 2 -->
+        <div class="row g-4 mb-4">
+            <!-- PACKAGE STATUS -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-2 text-success"></i>Package Status</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <canvas id="statusChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HUB PERFORMANCE -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2 text-primary"></i>Hub Performance</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <canvas id="hubChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FLEET UTILIZATION -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-speedometer2 me-2 text-danger"></i>Fleet Utilization</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div id="fleetList" style="font-size: 0.875rem;">
+                            @forelse($fleetData as $fleet)
+                                <div class="mb-3 pb-3" style="border-bottom: 1px solid #eee;">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-bold">{{ $fleet['name'] }}</span>
+                                        <span class="badge bg-primary">{{ $fleet['utilization'] }}%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ $fleet['utilization'] }}%;"></div>
+                                    </div>
+                                    <small class="text-muted">{{ $fleet['packages_count'] }}/{{ $fleet['max_capacity'] }} units</small>
+                                </div>
+                            @empty
+                                <div class="text-muted text-center py-4">Tidak ada data armada</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS ROW 3 -->
+        <div class="row g-4">
+            <!-- PACKAGE TREND (7 DAYS) -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Package Activity Trend (7 Days)</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <canvas id="trendChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP WAREHOUSES -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light border-bottom p-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-star me-2 text-warning"></i>Top Warehouses by Usage</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div style="font-size: 0.85rem;">
+                            @forelse($topWarehouses as $warehouse)
+                                <div class="mb-3 pb-3" style="border-bottom: 1px solid #eee;">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-bold">{{ $warehouse['warehouse_name'] }}</span>
+                                        <span class="badge" style="background: {{ $warehouse['usage_percentage'] > 90 ? '#dc3545' : ($warehouse['usage_percentage'] > 70 ? '#ffc107' : '#28a745') }};">
+                                            {{ $warehouse['usage_percentage'] }}%
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ $warehouse['usage_percentage'] }}%; background: {{ $warehouse['usage_percentage'] > 90 ? '#dc3545' : ($warehouse['usage_percentage'] > 70 ? '#ffc107' : '#28a745') }};"></div>
+                                    </div>
+                                    <small class="text-muted">{{ $warehouse['current_load'] }}/{{ $warehouse['capacity'] }} units</small>
+                                </div>
+                            @empty
+                                <div class="text-muted text-center py-4">Tidak ada data gudang</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // DATA FROM CONTROLLER
+    const warehouseData = @json($warehouseData);
+    const packageStats = @json($packageStats);
+    const hubData = @json($hubData);
+    const packageTrend = @json($packageTrend);
+
+    // CHART 1: WAREHOUSE CAPACITY
+    const warehouseCtx = document.getElementById('warehouseChart').getContext('2d');
+    new Chart(warehouseCtx, {
+        type: 'doughnut',
+        data: {
+            labels: warehouseData.map(w => w.warehouse_name),
+            datasets: [{
+                data: warehouseData.map(w => w.usage_percentage),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF9F40'
+                ],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { size: 11 }, padding: 10 }
+                }
+            }
+        }
+    });
+
+    // CHART 2: PACKAGE CATEGORY
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Small (≤1000 cm³)', 'Medium (1-5k cm³)', 'Large (>5k cm³)'],
+            datasets: [{
+                data: [packageStats.by_category.small, packageStats.by_category.medium, packageStats.by_category.large],
+                backgroundColor: ['#3498db', '#2ecc71', '#e74c3c'],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { size: 11 }, padding: 10 }
+                }
+            }
+        }
+    });
+
+    // CHART 3: PACKAGE STATUS
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(packageStats.by_status),
+            datasets: [{
+                label: 'Count',
+                data: Object.values(packageStats.by_status),
+                backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'],
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true }
+            }
+        }
+    });
+
+    // CHART 4: HUB PERFORMANCE
+    const hubCtx = document.getElementById('hubChart').getContext('2d');
+    new Chart(hubCtx, {
+        type: 'bar',
+        data: {
+            labels: hubData.map(h => h.name),
+            datasets: [{
+                label: 'Packages',
+                data: hubData.map(h => h.packages_count),
+                backgroundColor: '#4facfe',
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true }
+            }
+        }
+    });
+
+    // CHART 5: PACKAGE TREND
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(packageTrend),
+            datasets: [{
+                label: 'Package Activity',
+                data: Object.values(packageTrend),
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#2ecc71',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: true, labels: { font: { size: 12 } } }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+@endpush
 @endsection

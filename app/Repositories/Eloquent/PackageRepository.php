@@ -45,28 +45,42 @@ class PackageRepository implements PackageRepositoryInterface
 
     public function getAllPackagesPaginated($filters = [], $perPage = 15)
     {
-        $query = Package::with(['warehouse.hub', 'hub', 'fleet', 'latestLog'])->orderByDesc('created_at');
+        $page = request()->get('page', 1);
+        $search = $filters['search'] ?? '';
+        $status = $filters['status'] ?? '';
+        $warehouseId = $filters['warehouse_id'] ?? '';
+        
+        $cacheKey = "packages:list:paginated:" . md5($search . '|' . $status . '|' . $warehouseId . '|' . $page . '|' . $perPage);
 
-        if (isset($filters['warehouse_id'])) {
-            $query->where('warehouse_id', $filters['warehouse_id']);
-        }
+        return \App\Services\CacheService::remember(
+            $cacheKey,
+            function () use ($filters, $perPage) {
+                $query = Package::with(['warehouse.hub', 'hub', 'fleet', 'latestLog'])->orderByDesc('created_at');
 
-        if (isset($filters['status'])) {
-            $query->where('package_status', $filters['status']);
-        }
+                if (isset($filters['warehouse_id'])) {
+                    $query->where('warehouse_id', $filters['warehouse_id']);
+                }
 
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('tracking_number', 'like', "%{$search}%")
-                  ->orWhere('sender_name', 'like', "%{$search}%")
-                  ->orWhere('receiver_name', 'like', "%{$search}%")
-                  ->orWhere('origin', 'like', "%{$search}%")
-                  ->orWhere('destination', 'like', "%{$search}%");
-            });
-        }
+                if (isset($filters['status'])) {
+                    $query->where('package_status', $filters['status']);
+                }
 
-        return $query->paginate($perPage);
+                if (isset($filters['search'])) {
+                    $search = $filters['search'];
+                    $query->where(function ($q) use ($search) {
+                        $q->where('tracking_number', 'like', "%{$search}%")
+                          ->orWhere('sender_name', 'like', "%{$search}%")
+                          ->orWhere('receiver_name', 'like', "%{$search}%")
+                          ->orWhere('origin', 'like', "%{$search}%")
+                          ->orWhere('destination', 'like', "%{$search}%");
+                    });
+                }
+
+                return $query->paginate($perPage);
+            },
+            \App\Services\CacheService::TTL_SHORT,
+            [\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE]
+        );
     }
 
     public function getPackageById($id)
@@ -88,6 +102,9 @@ class PackageRepository implements PackageRepositoryInterface
 
         // Sinkronisasi current_load & status warehouse berdasarkan jumlah paket
         $this->syncWarehouseLoad($package->warehouse_id);
+
+        // Clear cache
+        \App\Services\CacheService::flushTag(\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE);
 
         return $package;
     }
@@ -115,6 +132,9 @@ class PackageRepository implements PackageRepositoryInterface
         // Sync warehouse baru
         $this->syncWarehouseLoad($package->warehouse_id);
 
+        // Clear cache
+        \App\Services\CacheService::flushTag(\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE);
+
         return $package;
     }
 
@@ -126,6 +146,9 @@ class PackageRepository implements PackageRepositoryInterface
 
         // Sinkronisasi current_load & status warehouse setelah hapus paket
         $this->syncWarehouseLoad($warehouseId);
+
+        // Clear cache
+        \App\Services\CacheService::flushTag(\App\Services\CacheService::TAG_SHIPMENT, \App\Services\CacheService::TAG_PACKAGE);
 
         return $result;
     }
